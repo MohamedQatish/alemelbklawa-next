@@ -4,8 +4,8 @@ import { writeFile, mkdir, unlink } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
 
-
-const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "products")
+// تعديل المسار: إزالة "public" من المسار
+const UPLOAD_DIR = join(process.cwd(), "uploads", "products")
 
 export async function POST(request: NextRequest) {
   const isAdmin = await validateAdminSession()
@@ -29,25 +29,30 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // التحقق من حجم الملف (5 ميجابايت كحد أقصى)
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json({ 
         error: "حجم الملف كبير جداً. الحد الأقصى 5 ميجابايت" 
       }, { status: 400 })
     }
 
+    // التأكد من وجود المجلد
     if (!existsSync(UPLOAD_DIR)) {
       await mkdir(UPLOAD_DIR, { recursive: true })
     }
 
+    // إنشاء اسم آمن للملف
     const timestamp = Date.now()
     const safeFileName = file.name.replace(/[^a-zA-Z0-9.\u0600-\u06FF]/g, '_')
     const fileName = `${timestamp}-${safeFileName}`
     const filePath = join(UPLOAD_DIR, fileName)
 
+    // حفظ الملف
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
+    // تعديل رابط الصورة: أصبح بدون "/" في البداية (مسار نسبي)
     const imageUrl = `uploads/products/${fileName}`
 
     return NextResponse.json({ 
