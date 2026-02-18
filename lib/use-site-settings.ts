@@ -20,7 +20,7 @@ export function useSiteSettings() {
     fetcher,
     {
       revalidateOnFocus: true,
-      refreshInterval: 30000, // refresh every 30s for near real-time sync
+      refreshInterval: 30000, 
       dedupingInterval: 5000,
     }
   )
@@ -37,8 +37,15 @@ export function useSiteSettings() {
   }
 
   function getImageUrl(key: string, fallback = "/placeholder.svg"): string {
-    return getImage(key)?.image_url || fallback
+    const imgUrl = getImage(key)?.image_url;
+
+    if (!imgUrl || imgUrl.trim() === "" || imgUrl.includes("placeholder.svg")) {
+      return fallback;
+    }
+
+    return imgUrl;
   }
+
 
   return {
     settings,
