@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    const imageUrl = `/uploads/products/${fileName}`
+    const imageUrl = `uploads/products/${fileName}`
 
     return NextResponse.json({ 
       url: imageUrl,
