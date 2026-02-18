@@ -13,15 +13,21 @@ jobs:
     - name: 🚚 Get latest code
       uses: actions/checkout@v3
 
+    - name: 📦 Install pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8 # أو النسخة التي تستخدمها في جهازك
+
     - name: ⚙️ Use Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '24.13.0'
+        cache: 'pnpm'
 
     - name: 🔨 Build Project
       run: |
-        npm install --legacy-peer-deps
-        npm run build
+        pnpm install --no-frozen-lockfile
+        pnpm run build
 
     - name: 📂 Sync Files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -35,3 +41,5 @@ jobs:
           **/.git*
           **/node_modules/**
           src/
+          .github/
+          pnpm-lock.yaml
