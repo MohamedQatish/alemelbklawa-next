@@ -3,7 +3,7 @@ name: Deploy Alemlbklawa to Libya Spider
 on:
   push:
     branches:
-      - main  
+      - main
 
 jobs:
   web-deploy:
@@ -16,11 +16,11 @@ jobs:
     - name: ⚙️ Use Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '24.13.0' 
+        node-version: '24.13.0'
 
     - name: 🔨 Build Project
       run: |
-       npm install --legacy-peer-deps
+        npm install --legacy-peer-deps
         npm run build
 
     - name: 📂 Sync Files via FTP
@@ -29,7 +29,6 @@ jobs:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-       
         local-dir: ./
         server-dir: ./
         exclude: |
