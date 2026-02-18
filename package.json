@@ -75,12 +75,17 @@
   },
   "pnpm": {
     "peerDependencyRules": {
-      "ignoreMissing": [
-        "date-fns"
-      ],
-      "allowAny": [
-        "date-fns"
-      ]
+      "ignoreMissing": ["date-fns"],
+      "allowAny": ["date-fns"]
+    }
+  },
+  "overrides": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-day-picker": {
+      "react": "^19.0.0",
+      "react-dom": "^19.0.0",
+      "date-fns": "4.1.0"
     }
   }
 }
