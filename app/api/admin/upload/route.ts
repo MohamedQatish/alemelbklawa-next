@@ -4,7 +4,7 @@ import { writeFile, mkdir, unlink } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
 
-// تعديل المسار: إزالة "public" من المسار
+// المسار الجديد: بجانب public
 const UPLOAD_DIR = join(process.cwd(), "uploads", "products")
 
 export async function POST(request: NextRequest) {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // التحقق من حجم الملف (5 ميجابايت كحد أقصى)
+    // التحقق من حجم الملف
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json({ 
         error: "حجم الملف كبير جداً. الحد الأقصى 5 ميجابايت" 
@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    // تعديل رابط الصورة: أصبح بدون "/" في البداية (مسار نسبي)
-    const imageUrl = `uploads/products/${fileName}`
+    // **تعديل مهم جداً: إضافة / في بداية الرابط**
+    const imageUrl = `/uploads/products/${fileName}`
 
     return NextResponse.json({ 
       url: imageUrl,
