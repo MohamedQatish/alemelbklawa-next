@@ -74,7 +74,7 @@ interface DBCategory {
 interface DBOptionGroup {
   id: number;
   name: string;
-  label_ar?: string; 
+  label_ar?: string;
   is_required: boolean;
   selection_type: "single" | "multiple";
   min_select: number;
@@ -82,7 +82,7 @@ interface DBOptionGroup {
   sort_order: number;
   options: {
     id: number;
-    name: string; 
+    name: string;
     price: number;
     replace_base_price: boolean;
     sort_order: number;
@@ -307,46 +307,50 @@ export default function ProductsManager() {
   }
 
   /* === Edit setup === */
- /* === Edit setup === */
-async function startEdit(product: Product) {
-  setEditingId(product.id);
-  setShowAdd(true);
-  
-  // Fetch assigned option groups for this product using the new system
-  let assignedGroupIds: number[] = [];
-  try {
-    // استخدام API الجديد مع product_id
-    const res = await fetch(`/api/admin/option-groups?product_id=${product.id}`);
-    if (res.ok) {
-      const groups = await res.json();
-      assignedGroupIds = groups.map((g: any) => g.id);
-      console.log("Fetched assigned groups:", assignedGroupIds); // للتصحيح
-    } else {
-      // Fallback to old API if needed
-      console.warn("Failed to fetch from new API, trying old one");
-      const oldRes = await fetch(`/api/products/options?product_id=${product.id}`);
-      if (oldRes.ok) {
-        const groups = await oldRes.json();
+  /* === Edit setup === */
+  async function startEdit(product: Product) {
+    setEditingId(product.id);
+    setShowAdd(true);
+
+    // Fetch assigned option groups for this product using the new system
+    let assignedGroupIds: number[] = [];
+    try {
+      // استخدام API الجديد مع product_id
+      const res = await fetch(
+        `/api/admin/option-groups?product_id=${product.id}`,
+      );
+      if (res.ok) {
+        const groups = await res.json();
         assignedGroupIds = groups.map((g: any) => g.id);
+        console.log("Fetched assigned groups:", assignedGroupIds); // للتصحيح
+      } else {
+        // Fallback to old API if needed
+        console.warn("Failed to fetch from new API, trying old one");
+        const oldRes = await fetch(
+          `/api/products/options?product_id=${product.id}`,
+        );
+        if (oldRes.ok) {
+          const groups = await oldRes.json();
+          assignedGroupIds = groups.map((g: any) => g.id);
+        }
       }
+    } catch (error) {
+      console.error("Error fetching assigned option groups:", error);
     }
-  } catch (error) {
-    console.error("Error fetching assigned option groups:", error);
+
+    setForm({
+      name: product.name,
+      description: product.description || "",
+      price: String(product.price),
+      category: product.category,
+      category_id: product.category_id || null,
+      image_url: product.image_url || "",
+      is_available: product.is_available,
+      is_featured: product.is_featured,
+      sort_order: String(product.sort_order),
+      option_group_ids: assignedGroupIds,
+    });
   }
-  
-  setForm({
-    name: product.name,
-    description: product.description || "",
-    price: String(product.price),
-    category: product.category,
-    category_id: product.category_id || null,
-    image_url: product.image_url || "",
-    is_available: product.is_available,
-    is_featured: product.is_featured,
-    sort_order: String(product.sort_order),
-    option_group_ids: assignedGroupIds,
-  });
-}
 
   function cancelEdit() {
     setEditingId(null);
@@ -569,9 +573,19 @@ async function startEdit(product: Product) {
                     style={{ borderColor: T.border }}
                   >
                     <img
-                      src={form.image_url || "/placeholder.svg"}
+                      // نستخدم دالة للتأكد من أن الرابط يبدأ بـ / دائماً
+                      src={
+                        form.image_url.startsWith("http")
+                          ? form.image_url
+                          : form.image_url.startsWith("/")
+                            ? form.image_url
+                            : `/${form.image_url}`
+                      }
                       alt="preview"
                       className="h-full w-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.svg";
+                      }}
                     />
                     <button
                       onClick={() => setForm((f) => ({ ...f, image_url: "" }))}
@@ -611,7 +625,7 @@ async function startEdit(product: Product) {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, image_url: e.target.value }))
                   }
-                  placeholder="أو ألص�� رابط الصورة..."
+                  placeholder="أو ألصق رابط الصورة..."
                   className="flex-1"
                   style={{ ...inputStyle, minWidth: "200px" }}
                   dir="ltr"
@@ -914,15 +928,25 @@ async function startEdit(product: Product) {
                   style={{ opacity: product.is_available ? 1 : 0.55 }}
                 >
                   {/* Image */}
+                  {/* Image in Product Card */}
                   <div
                     className="relative h-40 w-full overflow-hidden rounded-t-xl"
                     style={{ background: T.surfaceDeep }}
                   >
                     {product.image_url ? (
                       <img
-                        src={product.image_url || "/placeholder.svg"}
+                        // التأكد من أن المسار يبدأ بـ / ليعمل من أي صفحة فرعية
+                        src={
+                          product.image_url.startsWith("/")
+                            ? product.image_url
+                            : `/${product.image_url}`
+                        }
                         alt={product.name}
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            "/placeholder.svg";
+                        }}
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
@@ -932,44 +956,7 @@ async function startEdit(product: Product) {
                         />
                       </div>
                     )}
-                    {/* Badges */}
-                    <div className="absolute left-2 top-2 flex gap-1.5">
-                      {product.is_featured && (
-                        <span
-                          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
-                          style={{
-                            background: "hsl(43 80% 52% / 0.9)",
-                            color: "#1a0a00",
-                          }}
-                        >
-                          <Star className="h-2.5 w-2.5" /> مميز
-                        </span>
-                      )}
-                      {!product.is_available && (
-                        <span
-                          className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                          style={{
-                            background: "hsl(0 70% 50% / 0.9)",
-                            color: "#fff",
-                          }}
-                        >
-                          غير متوفر
-                        </span>
-                      )}
-                    </div>
-                    {/* Sort order badge */}
-                    <span
-                      className="absolute right-2 top-2 flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px]"
-                      style={{
-                        background: "hsl(0 0% 0% / 0.6)",
-                        color: T.textMuted,
-                      }}
-                    >
-                      <GripVertical className="h-2.5 w-2.5" />
-                      {product.sort_order}
-                    </span>
                   </div>
-
                   {/* Content */}
                   <div className="p-4">
                     <div className="mb-2 flex items-start justify-between gap-2">
