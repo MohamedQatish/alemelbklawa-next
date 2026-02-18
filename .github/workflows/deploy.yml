@@ -41,6 +41,7 @@ jobs:
         exclude: |
           **/.git*
           **/node_modules/**
+          public/uploads/**
           src/
           .github/
           pnpm-lock.yaml
