@@ -1482,41 +1482,56 @@ export default function AdminDashboard() {
                                       borderBottom: `1px solid hsl(200 80% 55% / 0.05)`,
                                     }}
                                   >
-                                  <td className="px-4 py-2" style={{ color: T.text }}>
-  <div className="font-medium">{item.product_name}</div>
-  {(() => {
-    // التعامل مع selected_options بأنواعها المختلفة
-    let options = item.selected_options;
-    
-    // إذا كانت نصاً، نحولها لمصفوفة
-    if (typeof options === 'string') {
-      try {
-        options = JSON.parse(options);
-      } catch (e) {
-        options = [];
-      }
-    }
-    
-    // إذا كانت مصفوفة وفيها عناصر، نعرضها
-    if (Array.isArray(options) && options.length > 0) {
-      return (
-        <div className="mt-2 space-y-1">
-          {options.map((opt: any, idx: number) => (
-            <div key={idx} className="flex items-center text-xs text-[var(--gold)]/80">
-              <span className="ml-2">•</span>
-              <span>{opt.name}</span>
-              <span className="mr-1 text-[var(--gold)]/60">
-                (+{opt.price} د.ل)
-              </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    
-    return null;
-  })()}
-</td>
+                                    <td
+                                      className="px-4 py-2"
+                                      style={{ color: T.text }}
+                                    >
+                                      <div className="font-medium">
+                                        {item.product_name}
+                                      </div>
+                                      {(() => {
+                                        // التعامل مع selected_options بأنواعها المختلفة
+                                        let options = item.selected_options;
+
+                                        // إذا كانت نصاً، نحولها لمصفوفة
+                                        if (typeof options === "string") {
+                                          try {
+                                            options = JSON.parse(options);
+                                          } catch (e) {
+                                            options = [];
+                                          }
+                                        }
+
+                                        // إذا كانت مصفوفة وفيها عناصر، نعرضها
+                                        if (
+                                          Array.isArray(options) &&
+                                          options.length > 0
+                                        ) {
+                                          return (
+                                            <div className="mt-2 space-y-1">
+                                              {options.map(
+                                                (opt: any, idx: number) => (
+                                                  <div
+                                                    key={idx}
+                                                    className="flex items-center text-xs text-[var(--gold)]/80"
+                                                  >
+                                                    <span className="ml-2">
+                                                      •
+                                                    </span>
+                                                    <span>{opt.name}</span>
+                                                    <span className="mr-1 text-[var(--gold)]/60">
+                                                      (+{opt.price} د.ل)
+                                                    </span>
+                                                  </div>
+                                                ),
+                                              )}
+                                            </div>
+                                          );
+                                        }
+
+                                        return null;
+                                      })()}
+                                    </td>
                                     <td
                                       className="px-4 py-2 text-center"
                                       style={{ color: T.text }}
