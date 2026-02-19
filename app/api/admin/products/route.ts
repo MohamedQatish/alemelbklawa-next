@@ -13,7 +13,7 @@ export async function GET() {
   try {
     const products = await sql`
       SELECT * FROM products ORDER BY category, sort_order, created_at DESC
-    ` as any[]
+    `
     return NextResponse.json(products)
   } catch (error) {
     console.error("Admin products error:", error)
@@ -35,10 +35,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "الاسم والسعر والتصنيف مطلوبة" }, { status: 400 })
     }
 
-    // بدء transaction
-    await sql`BEGIN`
-
-    try {
+    // استخدام sql.begin للمعاملة
+    const product = await sql.begin(async () => {
       // 1. إدراج المنتج
       const productResult = await sql`
         INSERT INTO products (name, description, price, category, category_id, image_url, is_available, is_featured, sort_order)
@@ -54,13 +52,12 @@ export async function POST(request: Request) {
           ${sort_order || 0}
         )
         RETURNING id
-      ` as any[]
+      `
       
       const product = productResult[0]
 
       // 2. تحديث مجموعات الخيارات (النظام الجديد - product_option_groups_v2)
       if (Array.isArray(option_group_ids) && option_group_ids.length > 0) {
-        // إعادة تعيين product_id لجميع المجموعات المحددة
         for (const groupId of option_group_ids) {
           await sql`
             UPDATE product_option_groups_v2 
@@ -70,12 +67,10 @@ export async function POST(request: Request) {
         }
       }
 
-      await sql`COMMIT`
-      return NextResponse.json(product, { status: 201 })
-    } catch (error) {
-      await sql`ROLLBACK`
-      throw error
-    }
+      return product
+    })
+
+    return NextResponse.json(product, { status: 201 })
   } catch (error) {
     console.error("Create product error:", error)
     return NextResponse.json({ error: "خطأ في إضافة المنتج" }, { status: 500 })
@@ -96,8 +91,8 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "معرف المنتج مطلوب" }, { status: 400 })
     }
 
-    // Fetch existing product first, then merge changes
-    const existingResult = await sql`SELECT * FROM products WHERE id = ${id}` as any[]
+    // جلب المنتج الحالي
+    const existingResult = await sql`SELECT * FROM products WHERE id = ${id}`
     if (existingResult.length === 0) {
       return NextResponse.json({ error: "المنتج غير موجود" }, { status: 404 })
     }
@@ -113,10 +108,8 @@ export async function PATCH(request: Request) {
     const newFeat = ("is_featured" in body) ? body.is_featured : p.is_featured
     const newSort = ("sort_order" in body) ? body.sort_order : p.sort_order
 
-    // بدء transaction
-    await sql`BEGIN`
-
-    try {
+    // استخدام sql.begin للمعاملة
+    const updated = await sql.begin(async () => {
       // 1. تحديث المنتج
       const updateResult = await sql`
         UPDATE products SET
@@ -132,7 +125,7 @@ export async function PATCH(request: Request) {
           updated_at = NOW()
         WHERE id = ${id}
         RETURNING id
-      ` as any[]
+      `
 
       if (updateResult.length === 0) {
         throw new Error("المنتج غير موجود")
@@ -140,14 +133,14 @@ export async function PATCH(request: Request) {
 
       // 2. تحديث مجموعات الخيارات إذا تم إرسالها
       if ("option_group_ids" in body && Array.isArray(body.option_group_ids)) {
-        // أولاً: إعادة تعيين product_id للمجموعات التي كانت مرتبطة بهذا المنتج سابقاً
+        // إعادة تعيين product_id للمجموعات التي كانت مرتبطة بهذا المنتج سابقاً
         await sql`
           UPDATE product_option_groups_v2 
           SET product_id = NULL 
           WHERE product_id = ${id}
         `
 
-        // ثانياً: تعيين product_id للمجموعات الجديدة المحددة
+        // تعيين product_id للمجموعات الجديدة
         if (body.option_group_ids.length > 0) {
           for (const groupId of body.option_group_ids) {
             await sql`
@@ -159,12 +152,10 @@ export async function PATCH(request: Request) {
         }
       }
 
-      await sql`COMMIT`
-      return NextResponse.json({ id, ...body })
-    } catch (error) {
-      await sql`ROLLBACK`
-      throw error
-    }
+      return { id, ...body }
+    })
+
+    return NextResponse.json(updated)
   } catch (error) {
     console.error("Update product error:", error)
     return NextResponse.json({ error: "خطأ في تحديث المنتج" }, { status: 500 })
@@ -184,10 +175,8 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "معرف المنتج مطلوب" }, { status: 400 })
     }
 
-    // بدء transaction
-    await sql`BEGIN`
-
-    try {
+    // استخدام sql.begin للمعاملة
+    await sql.begin(async () => {
       // 1. إلغاء ربط مجموعات الخيارات
       await sql`
         UPDATE product_option_groups_v2 
@@ -196,18 +185,14 @@ export async function DELETE(request: Request) {
       `
 
       // 2. حذف المنتج
-      const deleteResult = await sql`DELETE FROM products WHERE id = ${id} RETURNING id` as any[]
+      const deleteResult = await sql`DELETE FROM products WHERE id = ${id} RETURNING id`
       
       if (deleteResult.length === 0) {
         throw new Error("المنتج غير موجود")
       }
+    })
 
-      await sql`COMMIT`
-      return NextResponse.json({ success: true })
-    } catch (error) {
-      await sql`ROLLBACK`
-      throw error
-    }
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Delete product error:", error)
     return NextResponse.json({ error: "خطأ في حذف المنتج" }, { status: 500 })

@@ -1,6 +1,5 @@
-import { neon } from "@neondatabase/serverless";
-
-const sql = neon(process.env.DATABASE_URL);
+// استيراد sql من مكتبتنا الجديدة
+import { sql } from "@/lib/db";
 
 // SHA-256 hash with same salt as auth.ts
 async function hashPassword(password) {
@@ -12,28 +11,64 @@ async function hashPassword(password) {
 }
 
 async function main() {
-  const passwordHash = await hashPassword("kick1245");
-  console.log("Password hash generated for 'kick1245'");
+  console.log("🚀 بدء عملية تنظيف وإضافة المستخدمين...");
+  
+  try {
+    // 1️⃣ تفريغ جميع الجداول المتعلقة بالمستخدمين (بالتسلسل الصحيح)
+    console.log("📥 جاري تفريغ الجداول...");
+    
+    // استخدام transaction لضمان تنفيذ جميع العمليات بنجاح
+    await sql.begin(async () => {
+      // أولاً: حذف الجلسات (تعتمد على admin_users)
+      await sql`DELETE FROM admin_sessions`;
+      console.log("   ✅ تم تفريغ admin_sessions");
+      
+      // ثانياً: حذف المستخدمين (بعد حذف الجلسات)
+      await sql`DELETE FROM admin_users`;
+      console.log("   ✅ تم تفريغ admin_users");
+    });
 
-  // Delete any old admin user that was seeded before
-  await sql`DELETE FROM admin_sessions WHERE admin_user_id IN (SELECT id FROM admin_users WHERE username = 'admin')`;
-  await sql`DELETE FROM admin_users WHERE username = 'admin'`;
-  console.log("Cleaned up old 'admin' user if it existed");
+    // 2️⃣ إنشاء كلمة المرور المشفرة
+    const password = "kick1245";
+    const passwordHash = await hashPassword(password);
+    console.log(`🔐 تم إنشاء كلمة المرور المشفرة لـ '${password}'`);
 
-  // Upsert the 'kick' super admin user
-  const result = await sql`
-    INSERT INTO admin_users (username, password_hash, display_name, role, permissions, is_active)
-    VALUES ('kick', ${passwordHash}, 'مدير النظام', 'super_admin', '{full_access,view_dashboard,manage_products,manage_events,manage_gallery,manage_branches,manage_orders,manage_users,edit_content}', true)
-    ON CONFLICT (username) DO UPDATE SET
-      password_hash = EXCLUDED.password_hash,
-      display_name = EXCLUDED.display_name,
-      role = EXCLUDED.role,
-      permissions = EXCLUDED.permissions,
-      is_active = EXCLUDED.is_active
-    RETURNING id, username, role
-  `;
+    // 3️⃣ إضافة المستخدم الجديد
+    console.log("📝 جاري إضافة المستخدم الجديد...");
+    
+    // ملاحظة: مع postgres، نستخدم ARRAY مباشرة
+    const result = await sql`
+      INSERT INTO admin_users (
+        username, 
+        password_hash, 
+        display_name, 
+        role, 
+        permissions, 
+        is_active,
+        created_at
+      ) VALUES (
+        ${'kick'}, 
+        ${passwordHash}, 
+        ${'مدير النظام'}, 
+        ${'super_admin'}, 
+        ${['full_access', 'view_dashboard', 'manage_products', 'manage_events', 'manage_gallery', 'manage_branches', 'manage_orders', 'manage_users', 'edit_content']}, 
+        ${true},
+        ${new Date()}
+      )
+      RETURNING id, username, role, display_name
+    `;
 
-  console.log("Super admin user created/updated:", result[0]);
+    console.log("\n✅ تمت العملية بنجاح!");
+    console.log("📊 معلومات المستخدم الجديد:");
+    console.log(`   • المعرف: ${result[0].id}`);
+    console.log(`   • اسم المستخدم: ${result[0].username}`);
+    console.log(`   • الصلاحية: ${result[0].role}`);
+    console.log(`   • الاسم المعروض: ${result[0].display_name}`);
+    console.log(`\n🔑 كلمة المرور: ${password}`);
+    
+  } catch (error) {
+    console.error("❌ حدث خطأ:", error);
+  }
 }
 
 main().catch(console.error);

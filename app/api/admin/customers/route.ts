@@ -1,3 +1,4 @@
+// app/api/admin/customers/route.ts
 import { validateAdminSession } from "@/lib/auth"
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
@@ -11,20 +12,21 @@ export async function GET() {
   }
 
   try {
+    // استخدام الأعمدة الموجودة فقط في جدول users
     const customers = await sql`
       SELECT
         id,
         name,
         phone,
         email,
-        city,
         address,
-        is_active,
+        location as city,
         created_at
       FROM users
-      WHERE password_hash IS NOT NULL
+      WHERE password_hash IS NOT NULL  -- هذا يفصل العملاء عن المستخدمين الإداريين
       ORDER BY created_at DESC
     `
+    
     return NextResponse.json(customers)
   } catch (error) {
     console.error("Admin customers error:", error)

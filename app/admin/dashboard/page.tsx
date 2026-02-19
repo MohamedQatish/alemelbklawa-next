@@ -21,7 +21,6 @@ import {
   CheckCircle,
   XCircle,
   TrendingUp,
-  TrendingDown,
   Package,
   Search,
   Phone,
@@ -40,47 +39,7 @@ import {
   Building2,
   FolderOpen,
   Settings2,
-  ChevronDown,
-  Download,
-  RefreshCw,
-  Eye,
-  EyeOff,
-  ArrowUpRight,
-  ArrowDownRight,
-  CreditCard,
-  Wallet,
-  Smartphone,
-  Award,
-  Activity,
-  PieChart,
-  LineChart,
-  BarChart,
-  Target,
-  Zap,
-  Gift,
-  Coffee,
-  Utensils,
 } from "lucide-react";
-
-// استيراد مكتبة الرسوم البيانية
-import {
-  LineChart as RechartsLineChart,
-  Line,
-  AreaChart,
-  Area,
-  BarChart as RechartsBarChart,
-  Bar,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Sector,
-} from "recharts";
 
 /* ============ Count-up Hook ============ */
 function useCountUp(end: number, duration = 800) {
@@ -227,18 +186,6 @@ const T = {
   textDim: "var(--admin-text-dim)",
 };
 
-// ألوان المخططات
-const CHART_COLORS = [
-  "#7B1E2F",
-  "#C5A55A",
-  "#E0C97B",
-  "#9F4A5A",
-  "#B88B4A",
-  "#5A3E2E",
-  "#8B5E3C",
-  "#A55D5D",
-];
-
 /* ============ Main Component ============ */
 export default function AdminDashboard() {
   const router = useRouter();
@@ -256,8 +203,6 @@ export default function AdminDashboard() {
   const [filterLoading, setFilterLoading] = useState(false);
   const [tabKey, setTabKey] = useState(0);
   const printRef = useRef<HTMLDivElement>(null);
-  const [showFilters, setShowFilters] = useState(true);
-  const [activeChart, setActiveChart] = useState<"line" | "bar" | "area">("line");
 
   // Date filter state
   const [filterDay, setFilterDay] = useState("");
@@ -268,7 +213,6 @@ export default function AdminDashboard() {
   const [filterMode, setFilterMode] = useState<"dropdowns" | "range">(
     "dropdowns",
   );
-  const [activePreset, setActivePreset] = useState<string>("today");
 
   const fetchStats = useCallback(async () => {
     const params = new URLSearchParams();
@@ -334,74 +278,6 @@ export default function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterDay, filterMonth, filterYear, startDate, endDate, filterMode]);
 
-  // Preset filters
-  const applyPreset = (preset: string) => {
-    setActivePreset(preset);
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth() + 1;
-    const day = today.getDate();
-
-    switch (preset) {
-      case "today":
-        setFilterMode("dropdowns");
-        setFilterDay(day.toString());
-        setFilterMonth(month.toString());
-        setFilterYear(year.toString());
-        setStartDate("");
-        setEndDate("");
-        break;
-      case "yesterday":
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        setFilterMode("dropdowns");
-        setFilterDay(yesterday.getDate().toString());
-        setFilterMonth((yesterday.getMonth() + 1).toString());
-        setFilterYear(yesterday.getFullYear().toString());
-        setStartDate("");
-        setEndDate("");
-        break;
-      case "thisWeek":
-        const firstDay = new Date(today);
-        firstDay.setDate(today.getDate() - today.getDay());
-        const lastDay = new Date(firstDay);
-        lastDay.setDate(firstDay.getDate() + 6);
-        setFilterMode("range");
-        setStartDate(firstDay.toISOString().split('T')[0]);
-        setEndDate(lastDay.toISOString().split('T')[0]);
-        setFilterDay("");
-        setFilterMonth("");
-        setFilterYear("");
-        break;
-      case "thisMonth":
-        setFilterMode("dropdowns");
-        setFilterDay("");
-        setFilterMonth(month.toString());
-        setFilterYear(year.toString());
-        setStartDate("");
-        setEndDate("");
-        break;
-      case "lastMonth":
-        const lastMonth = new Date(today);
-        lastMonth.setMonth(lastMonth.getMonth() - 1);
-        setFilterMode("dropdowns");
-        setFilterDay("");
-        setFilterMonth((lastMonth.getMonth() + 1).toString());
-        setFilterYear(lastMonth.getFullYear().toString());
-        setStartDate("");
-        setEndDate("");
-        break;
-      case "thisYear":
-        setFilterMode("dropdowns");
-        setFilterDay("");
-        setFilterMonth("");
-        setFilterYear(year.toString());
-        setStartDate("");
-        setEndDate("");
-        break;
-    }
-  };
-
   async function updateOrderStatus(orderId: number, newStatus: string) {
     setRefreshing(true);
     setOrders((prev) =>
@@ -437,7 +313,6 @@ export default function AdminDashboard() {
     setFilterYear("");
     setStartDate("");
     setEndDate("");
-    setActivePreset("");
   }
 
   function printInvoice(order: Order) {
@@ -883,48 +758,6 @@ export default function AdminDashboard() {
     (tab) => !tab.perm || userCan(sessionUser, tab.perm),
   );
 
-  // تحضير بيانات المخططات
-  const prepareChartData = () => {
-    if (!stats?.hourlySales) return [];
-    
-    // تحويل بيانات الساعات إلى تنسيق المخطط
-    return Array.from({ length: 24 }, (_, hour) => {
-      const data = stats.hourlySales.find(h => h.hour === hour);
-      return {
-        name: `${hour}:00`,
-        الساعة: hour,
-        المبيعات: data?.total || 0,
-        الطلبات: data?.count || 0,
-      };
-    });
-  };
-
-  // بيانات المنتجات الأكثر مبيعاً (مثال - يمكن تعديلها حسب البيانات الفعلية)
-  const getTopProductsData = () => {
-    // هذه بيانات تجريبية - يمكن استبدالها ببيانات حقيقية من API
-    return [
-      { name: "بقلاوة طرابلسية", value: 45 },
-      { name: "كنافة نابلسية", value: 38 },
-      { name: "معمول بالتمر", value: 30 },
-      { name: "غريبة", value: 25 },
-      { name: "وربات", value: 20 },
-    ];
-  };
-
-  // بيانات طرق الدفع
-  const getPaymentMethodsData = () => {
-    // هذه بيانات تجريبية - يمكن استبدالها ببيانات حقيقية
-    return [
-      { name: "بطاقة بنكية", value: 55 },
-      { name: "الدفع عند الاستلام", value: 35 },
-      { name: "LYPAY", value: 10 },
-    ];
-  };
-
-  const chartData = prepareChartData();
-  const topProductsData = getTopProductsData();
-  const paymentMethodsData = getPaymentMethodsData();
-
   return (
     <div
       className="admin-inputs min-h-screen"
@@ -933,27 +766,18 @@ export default function AdminDashboard() {
     >
       {/* ===== Top Bar ===== */}
       <header
-        className="admin-panel animate-slide-up-fade sticky top-0 z-50 backdrop-blur-xl"
+        className="admin-panel animate-slide-up-fade"
         style={{
           borderRadius: 0,
           borderLeft: "none",
           borderRight: "none",
           borderTop: "none",
-          background: `${T.surface}cc`,
         }}
       >
         <div className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7B1E2F] to-[#5A0F1F] shadow-lg">
-              <Store className="h-5 w-5 text-[#E0C97B]" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold" style={{ color: T.accentLight }}>
-                عالم البقلاوة
-              </h1>
-              <p className="text-xs" style={{ color: T.textDim }}>لوحة التحكم الإدارية</p>
-            </div>
-          </div>
+          <h1 className="text-2xl font-bold" style={{ color: T.accentLight }}>
+            لوحة التحكم
+          </h1>
           <div className="flex items-center gap-3">
             {refreshing && (
               <span
@@ -963,18 +787,21 @@ export default function AdminDashboard() {
             )}
             <button
               onClick={handleLogout}
-              className="group relative flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-2 text-sm font-medium text-red-400 transition-all duration-300 hover:bg-red-500/10 hover:shadow-lg hover:shadow-red-500/10"
+              className="admin-btn-glow flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition-colors hover:bg-red-500/10"
+              style={{
+                borderColor: "hsl(0 70% 55% / 0.25)",
+                color: "hsl(0 70% 65%)",
+              }}
             >
-              <LogOut className="h-4 w-4 transition-transform group-hover:-translate-x-1" /> 
-              <span>خروج</span>
+              <LogOut className="h-4 w-4" /> خروج
             </button>
           </div>
         </div>
       </header>
 
       {/* ===== Tabs ===== */}
-      <div className="border-b sticky top-[73px] z-40 backdrop-blur-xl" style={{ borderColor: T.border, background: `${T.surface}cc` }}>
-        <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-6 scrollbar-hide">
+      <div className="border-b" style={{ borderColor: T.border }}>
+        <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-6">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -986,11 +813,11 @@ export default function AdminDashboard() {
               }}
             >
               <span
-                className={`transition-all duration-300 ${activeTab === tab.id ? "scale-110" : "group-hover:scale-105"}`}
+                className={`transition-transform duration-300 ${activeTab === tab.id ? "scale-110" : "group-hover:scale-105"}`}
               >
                 {tab.icon}
               </span>
-              <span>{tab.label}</span>
+              {tab.label}
               {activeTab === tab.id && (
                 <span
                   className="absolute inset-x-0 -bottom-px h-0.5"
@@ -1007,82 +834,62 @@ export default function AdminDashboard() {
       {/* ===== Content ===== */}
       <div className="mx-auto max-w-7xl p-6">
         <div key={tabKey} className="animate-tab-enter">
-          {/* ========== STATS TAB - REDESIGNED WITH CHARTS ========== */}
+          {/* ========== STATS TAB ========== */}
           {activeTab === "stats" && stats && (
-            <div className="flex flex-col gap-6">
-              {/* --- Filter Section - Redesigned --- */}
-              <section className="admin-panel overflow-hidden">
-                <div className="border-b p-4" style={{ borderColor: T.border }}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#7B1E2F] to-[#5A0F1F]">
-                        <Filter className="h-4 w-4 text-[#E0C97B]" />
-                      </div>
-                      <h3 className="text-sm font-bold" style={{ color: T.accentLight }}>
-                        تصفية البيانات
-                      </h3>
-                      {filterLoading && (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-[#E0C97B]" />
-                      )}
-                      {isFiltered && (
-                        <span className="rounded-full bg-[#7B1E2F] px-2 py-0.5 text-[10px] text-[#E0C97B]">
-                          مفعل
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setShowFilters(!showFilters)}
-                      className="rounded-lg p-1 transition-all hover:bg-white/5"
+            <div className="flex flex-col gap-8">
+              {/* --- FILTER SECTION --- */}
+              <section className="admin-panel animate-card-enter relative p-4 sm:p-5">
+                <div className="relative z-10">
+                  <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+                    <h3
+                      className="flex items-center gap-2 text-sm font-bold"
+                      style={{ color: T.accentLight }}
                     >
-                      <ChevronDown className={`h-5 w-5 transition-transform duration-300 ${showFilters ? 'rotate-180' : ''}`} style={{ color: T.textMuted }} />
-                    </button>
-                  </div>
-                </div>
+                      <div
+                        className="flex h-6 w-6 items-center justify-center rounded-md"
+                        style={{ background: "hsl(200 80% 55% / 0.15)" }}
+                      >
+                        <Filter
+                          className="h-3 w-3"
+                          style={{ color: T.accentLight }}
+                        />
+                      </div>
+                      تصفية المبيعات حسب التاريخ
+                      {filterLoading && (
+                        <span
+                          className="mr-1.5 inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-transparent"
+                          style={{ borderTopColor: T.accent }}
+                        />
+                      )}
+                    </h3>
 
-                {showFilters && (
-                  <div className="p-4 space-y-4">
-                    {/* Quick Presets */}
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { id: 'today', label: 'اليوم', icon: <Calendar className="h-3 w-3" /> },
-                        { id: 'yesterday', label: 'أمس', icon: <Calendar className="h-3 w-3" /> },
-                        { id: 'thisWeek', label: 'هذا الأسبوع', icon: <CalendarDays className="h-3 w-3" /> },
-                        { id: 'thisMonth', label: 'هذا الشهر', icon: <CalendarDays className="h-3 w-3" /> },
-                        { id: 'lastMonth', label: 'الشهر الماضي', icon: <CalendarDays className="h-3 w-3" /> },
-                        { id: 'thisYear', label: 'هذه السنة', icon: <Calendar className="h-3 w-3" /> },
-                      ].map((preset) => (
-                        <button
-                          key={preset.id}
-                          onClick={() => applyPreset(preset.id)}
-                          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                            activePreset === preset.id 
-                              ? 'bg-gradient-to-r from-[#7B1E2F] to-[#5A0F1F] text-[#E0C97B] shadow-lg' 
-                              : 'hover:bg-white/5'
-                          }`}
-                          style={{ background: activePreset === preset.id ? '' : T.surfaceHover }}
-                        >
-                          {preset.icon}
-                          {preset.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Filter Mode Toggle */}
-                    <div className="flex gap-2 rounded-lg p-1" style={{ background: T.surfaceDeep }}>
+                    <div
+                      className="flex gap-0.5 rounded-md p-0.5"
+                      style={{ background: T.surfaceHover }}
+                    >
                       <button
                         onClick={() => {
                           setFilterMode("dropdowns");
                           setStartDate("");
                           setEndDate("");
                         }}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-all"
+                        className="flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all duration-300"
                         style={{
-                          background: filterMode === "dropdowns" ? T.surfaceHover : "transparent",
-                          color: filterMode === "dropdowns" ? T.accentLight : T.textMuted,
+                          background:
+                            filterMode === "dropdowns"
+                              ? "hsl(200 80% 55% / 0.2)"
+                              : "transparent",
+                          color:
+                            filterMode === "dropdowns"
+                              ? T.accentLight
+                              : T.textMuted,
+                          boxShadow:
+                            filterMode === "dropdowns"
+                              ? `0 0 8px ${T.glow}`
+                              : "none",
                         }}
                       >
-                        <CalendarDays className="h-3.5 w-3.5" />
-                        يوم / شهر / سنة
+                        <CalendarDays className="h-3 w-3" /> يوم / شهر / سنة
                       </button>
                       <button
                         onClick={() => {
@@ -1091,518 +898,369 @@ export default function AdminDashboard() {
                           setFilterMonth("");
                           setFilterYear("");
                         }}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-all"
+                        className="flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all duration-300"
                         style={{
-                          background: filterMode === "range" ? T.surfaceHover : "transparent",
-                          color: filterMode === "range" ? T.accentLight : T.textMuted,
+                          background:
+                            filterMode === "range"
+                              ? "hsl(200 80% 55% / 0.2)"
+                              : "transparent",
+                          color:
+                            filterMode === "range"
+                              ? T.accentLight
+                              : T.textMuted,
+                          boxShadow:
+                            filterMode === "range"
+                              ? `0 0 8px ${T.glow}`
+                              : "none",
                         }}
                       >
-                        <Calendar className="h-3.5 w-3.5" />
-                        نطاق مخصص
+                        <Calendar className="h-3 w-3" /> نطاق مخصص
                       </button>
                     </div>
+                  </div>
 
-                    {/* Filter Inputs */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                      {filterMode === "dropdowns" ? (
-                        <>
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-medium" style={{ color: T.accentMuted }}>اليوم</label>
-                            <select
-                              value={filterDay}
-                              onChange={(e) => setFilterDay(e.target.value)}
-                              className="w-full rounded-lg border px-3 py-2 text-sm transition-all focus:shadow-lg"
-                              style={{
-                                background: T.surfaceHover,
-                                borderColor: filterDay ? T.accent : T.border,
-                                color: T.text,
-                              }}
-                            >
-                              <option value="">الكل</option>
-                              {Array.from({ length: 31 }, (_, i) => (
-                                <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-medium" style={{ color: T.accentMuted }}>الشهر</label>
-                            <select
-                              value={filterMonth}
-                              onChange={(e) => setFilterMonth(e.target.value)}
-                              className="w-full rounded-lg border px-3 py-2 text-sm transition-all focus:shadow-lg"
-                              style={{
-                                background: T.surfaceHover,
-                                borderColor: filterMonth ? T.accent : T.border,
-                                color: T.text,
-                              }}
-                            >
-                              <option value="">الكل</option>
-                              {[
-                                "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-                                "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
-                              ].map((m, i) => (
-                                <option key={i + 1} value={String(i + 1)}>{m}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-medium" style={{ color: T.accentMuted }}>السنة</label>
-                            <select
-                              value={filterYear}
-                              onChange={(e) => setFilterYear(e.target.value)}
-                              className="w-full rounded-lg border px-3 py-2 text-sm transition-all focus:shadow-lg"
-                              style={{
-                                background: T.surfaceHover,
-                                borderColor: filterYear ? T.accent : T.border,
-                                color: T.text,
-                              }}
-                            >
-                              <option value="">الكل</option>
-                              {[2024, 2025, 2026, 2027].map((y) => (
-                                <option key={y} value={String(y)}>{y}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-medium" style={{ color: T.accentMuted }}>من تاريخ</label>
-                            <input
-                              type="date"
-                              value={startDate}
-                              onChange={(e) => setStartDate(e.target.value)}
-                              className="w-full rounded-lg border px-3 py-2 text-sm transition-all focus:shadow-lg"
-                              style={{
-                                background: T.surfaceHover,
-                                borderColor: startDate ? T.accent : T.border,
-                                color: T.text,
-                              }}
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-medium" style={{ color: T.accentMuted }}>إلى تاريخ</label>
-                            <input
-                              type="date"
-                              value={endDate}
-                              onChange={(e) => setEndDate(e.target.value)}
-                              className="w-full rounded-lg border px-3 py-2 text-sm transition-all focus:shadow-lg"
-                              style={{
-                                background: T.surfaceHover,
-                                borderColor: endDate ? T.accent : T.border,
-                                color: T.text,
-                              }}
-                            />
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* Reset Button */}
-                      <div className="flex items-end">
-                        <button
-                          onClick={resetFilters}
-                          className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-2 text-sm font-medium text-red-400 transition-all hover:bg-red-500/10"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                          إعادة تعيين
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Filter Summary - Now Integrated */}
-                    {isFiltered && (
-                      <div className="mt-4 rounded-lg border p-3" style={{ borderColor: T.border, background: T.surfaceDeep }}>
-                        <p className="mb-2 text-xs font-medium" style={{ color: T.accentMuted }}>
-                          {stats.filteredLabel} - نتائج الفلترة
-                        </p>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                          <CompactStat
-                            label="المبيعات"
-                            value={stats.filteredSales}
-                            isCurrency
-                            color="#7B1E2F"
-                          />
-                          <CompactStat
-                            label="الطلبات المكتملة"
-                            value={stats.filteredOrders}
-                            color="#10b981"
-                          />
-                          <CompactStat
-                            label="قيد الانتظار"
-                            value={stats.filteredPending}
-                            color="#f59e0b"
-                          />
-                          <CompactStat
-                            label="ملغية"
-                            value={stats.filteredCancelled}
-                            color="#ef4444"
+                  <div className="flex flex-wrap items-end gap-3">
+                    {filterMode === "dropdowns" ? (
+                      <>
+                        <FilterSelect
+                          label="اليوم"
+                          value={filterDay}
+                          onChange={setFilterDay}
+                          options={Array.from({ length: 31 }, (_, i) => ({
+                            value: String(i + 1),
+                            label: String(i + 1),
+                          }))}
+                        />
+                        <FilterSelect
+                          label="الشهر"
+                          value={filterMonth}
+                          onChange={setFilterMonth}
+                          options={[
+                            "يناير",
+                            "فبراير",
+                            "مارس",
+                            "أبريل",
+                            "مايو",
+                            "يونيو",
+                            "يوليو",
+                            "أغسطس",
+                            "سبتمبر",
+                            "أكتوبر",
+                            "نوفمبر",
+                            "ديسمبر",
+                          ].map((m, i) => ({
+                            value: String(i + 1),
+                            label: m,
+                          }))}
+                        />
+                        <FilterSelect
+                          label="السنة"
+                          value={filterYear}
+                          onChange={setFilterYear}
+                          options={[2024, 2025, 2026, 2027].map((y) => ({
+                            value: String(y),
+                            label: String(y),
+                          }))}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex flex-col gap-1">
+                          <label
+                            className="text-[11px] font-medium"
+                            style={{ color: T.accentMuted }}
+                          >
+                            من تاريخ
+                          </label>
+                          <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className={`rounded-md border text-xs transition-all duration-300 ${startDate ? "filter-active-glow" : ""}`}
+                            style={{
+                              background: T.surfaceHover,
+                              borderColor: T.border,
+                              color: T.text,
+                            }}
                           />
                         </div>
-                      </div>
+                        <div className="flex flex-col gap-1">
+                          <label
+                            className="text-[11px] font-medium"
+                            style={{ color: T.accentMuted }}
+                          >
+                            إلى تاريخ
+                          </label>
+                          <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className={`rounded-md border text-xs transition-all duration-300 ${endDate ? "filter-active-glow" : ""}`}
+                            style={{
+                              background: T.surfaceHover,
+                              borderColor: T.border,
+                              color: T.text,
+                            }}
+                          />
+                        </div>
+                      </>
                     )}
+
+                    <button
+                      onClick={resetFilters}
+                      className="admin-btn-glow flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-[11px] font-medium transition-all duration-300"
+                      style={{
+                        borderColor: "hsl(0 70% 55% / 0.25)",
+                        color: "hsl(0 70% 65%)",
+                        background: "hsl(0 70% 55% / 0.08)",
+                      }}
+                    >
+                      <RotateCcw className="h-3 w-3" /> إعادة تعيين
+                    </button>
                   </div>
-                )}
-              </section>
 
-              {/* --- Main KPI Cards - Now with Filter Integration --- */}
-              <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                <MainKpiCard
-                  title="مبيعات اليوم"
-                  value={stats.todaySales}
-                  filteredValue={isFiltered ? stats.filteredSales : undefined}
-                  icon={<TrendingUp className="h-4 w-4" />}
-                  color="from-blue-500 to-cyan-500"
-                  isCurrency
-                />
-                <MainKpiCard
-                  title="مبيعات الشهر"
-                  value={stats.monthlySales}
-                  icon={<BarChart3 className="h-4 w-4" />}
-                  color="from-purple-500 to-pink-500"
-                  isCurrency
-                />
-                <MainKpiCard
-                  title="الطلبات المكتملة"
-                  value={stats.totalOrders}
-                  filteredValue={isFiltered ? stats.filteredOrders : undefined}
-                  icon={<Package className="h-4 w-4" />}
-                  color="from-emerald-500 to-teal-500"
-                />
-                <MainKpiCard
-                  title="قيد الانتظار"
-                  value={stats.pendingOrders}
-                  filteredValue={isFiltered ? stats.filteredPending : undefined}
-                  icon={<Clock className="h-4 w-4" />}
-                  color="from-amber-500 to-orange-500"
-                />
-                <MainKpiCard
-                  title="الطلبات الملغية"
-                  value={stats.cancelledOrders}
-                  filteredValue={isFiltered ? stats.filteredCancelled : undefined}
-                  icon={<Ban className="h-4 w-4" />}
-                  color="from-rose-500 to-red-500"
-                />
-                <MainKpiCard
-                  title="إجمالي العملاء"
-                  value={stats.totalCustomers}
-                  icon={<Users className="h-4 w-4" />}
-                  color="from-indigo-500 to-purple-500"
-                />
-              </section>
-
-              {/* --- Professional Charts Section --- */}
-              <section className="grid gap-6 lg:grid-cols-3">
-                {/* Line Chart - Sales Over Time */}
-                <div className="admin-panel col-span-2 p-5">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="flex items-center gap-2 text-sm font-bold" style={{ color: T.accentLight }}>
-                      <Activity className="h-4 w-4" />
-                      تحليل المبيعات على مدار اليوم
-                    </h3>
-                    <div className="flex gap-1 rounded-lg p-1" style={{ background: T.surfaceDeep }}>
-                      <button
-                        onClick={() => setActiveChart("line")}
-                        className={`rounded-md px-2 py-1 text-xs transition-all ${
-                          activeChart === "line" ? 'bg-[#7B1E2F] text-[#E0C97B]' : 'hover:bg-white/5'
-                        }`}
+                  {/* Filtered Result Summary */}
+                  {isFiltered && (
+                    <div
+                      className="mt-4 animate-slide-up-fade rounded-lg border p-4"
+                      style={{
+                        borderColor: T.border,
+                        background: T.surfaceDeep,
+                      }}
+                    >
+                      <p
+                        className="mb-1.5 text-xs"
+                        style={{ color: T.accentMuted }}
                       >
-                        خطي
-                      </button>
-                      <button
-                        onClick={() => setActiveChart("bar")}
-                        className={`rounded-md px-2 py-1 text-xs transition-all ${
-                          activeChart === "bar" ? 'bg-[#7B1E2F] text-[#E0C97B]' : 'hover:bg-white/5'
-                        }`}
-                      >
-                        أعمدة
-                      </button>
-                      <button
-                        onClick={() => setActiveChart("area")}
-                        className={`rounded-md px-2 py-1 text-xs transition-all ${
-                          activeChart === "area" ? 'bg-[#7B1E2F] text-[#E0C97B]' : 'hover:bg-white/5'
-                        }`}
-                      >
-                        مساحة
-                      </button>
+                        {stats.filteredLabel}
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-4">
+                        <FilterResultCard
+                          label="المبيعات"
+                          value={stats.filteredSales}
+                          isCurrency
+                          color="hsl(200 80% 65%)"
+                        />
+                        <FilterResultCard
+                          label="الطلبات المكتملة"
+                          value={stats.filteredOrders}
+                          color="hsl(150 70% 55%)"
+                        />
+                        <FilterResultCard
+                          label="قيد الانتظار"
+                          value={stats.filteredPending}
+                          color="hsl(45 90% 55%)"
+                        />
+                        <FilterResultCard
+                          label="ملغية"
+                          value={stats.filteredCancelled}
+                          color="hsl(0 70% 60%)"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      {activeChart === "line" ? (
-                        <RechartsLineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={`${T.border}40`} />
-                          <XAxis 
-                            dataKey="name" 
-                            tick={{ fill: T.textMuted, fontSize: 11 }}
-                            axisLine={{ stroke: T.border }}
-                          />
-                          <YAxis 
-                            tick={{ fill: T.textMuted, fontSize: 11 }}
-                            axisLine={{ stroke: T.border }}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              background: T.surface,
-                              borderColor: T.border,
-                              borderRadius: '8px',
-                              color: T.text,
-                            }}
-                          />
-                          <Legend wrapperStyle={{ color: T.text }} />
-                          <Line 
-                            type="monotone" 
-                            dataKey="المبيعات" 
-                            stroke="#7B1E2F" 
-                            strokeWidth={2}
-                            dot={{ fill: "#7B1E2F", r: 4 }}
-                            activeDot={{ r: 6, fill: "#E0C97B" }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="الطلبات" 
-                            stroke="#C5A55A" 
-                            strokeWidth={2}
-                            dot={{ fill: "#C5A55A", r: 3 }}
-                          />
-                        </RechartsLineChart>
-                      ) : activeChart === "bar" ? (
-                        <RechartsBarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={`${T.border}40`} />
-                          <XAxis 
-                            dataKey="name" 
-                            tick={{ fill: T.textMuted, fontSize: 11 }}
-                            axisLine={{ stroke: T.border }}
-                          />
-                          <YAxis 
-                            tick={{ fill: T.textMuted, fontSize: 11 }}
-                            axisLine={{ stroke: T.border }}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              background: T.surface,
-                              borderColor: T.border,
-                              borderRadius: '8px',
-                              color: T.text,
-                            }}
-                          />
-                          <Legend wrapperStyle={{ color: T.text }} />
-                          <Bar dataKey="المبيعات" fill="#7B1E2F" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="الطلبات" fill="#C5A55A" radius={[4, 4, 0, 0]} />
-                        </RechartsBarChart>
-                      ) : (
-                        <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                          <defs>
-                            <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#7B1E2F" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#7B1E2F" stopOpacity={0.1}/>
-                            </linearGradient>
-                            <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#C5A55A" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#C5A55A" stopOpacity={0.1}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke={`${T.border}40`} />
-                          <XAxis 
-                            dataKey="name" 
-                            tick={{ fill: T.textMuted, fontSize: 11 }}
-                            axisLine={{ stroke: T.border }}
-                          />
-                          <YAxis 
-                            tick={{ fill: T.textMuted, fontSize: 11 }}
-                            axisLine={{ stroke: T.border }}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              background: T.surface,
-                              borderColor: T.border,
-                              borderRadius: '8px',
-                              color: T.text,
-                            }}
-                          />
-                          <Legend wrapperStyle={{ color: T.text }} />
-                          <Area 
-                            type="monotone" 
-                            dataKey="المبيعات" 
-                            stroke="#7B1E2F" 
-                            fillOpacity={1}
-                            fill="url(#colorSales)" 
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="الطلبات" 
-                            stroke="#C5A55A" 
-                            fillOpacity={1}
-                            fill="url(#colorOrders)" 
-                          />
-                        </AreaChart>
-                      )}
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                  )}
 
-                {/* Pie Charts Column */}
-                <div className="space-y-6">
-                  {/* Top Products Pie Chart */}
-                  <div className="admin-panel p-5">
-                    <h3 className="mb-4 flex items-center gap-2 text-sm font-bold" style={{ color: T.accentLight }}>
-                      <PieChart className="h-4 w-4" />
-                      أكثر المنتجات مبيعاً
-                    </h3>
-                    <div className="h-48 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsPieChart>
-                          <Pie
-                            data={topProductsData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={40}
-                            outerRadius={70}
-                            fill="#8884d8"
-                            paddingAngle={5}
-                            dataKey="value"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                            labelLine={{ stroke: T.textMuted }}
-                          >
-                            {topProductsData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{
-                              background: T.surface,
-                              borderColor: T.border,
-                              borderRadius: '8px',
-                              color: T.text,
-                            }}
-                          />
-                        </RechartsPieChart>
-                      </ResponsiveContainer>
+                  {/* Hourly Breakdown */}
+                  {stats.hourlySales.length > 0 && (
+                    <div className="mt-4 animate-slide-up-fade">
+                      <h4
+                        className="mb-2 text-xs font-semibold"
+                        style={{ color: T.accentMuted }}
+                      >
+                        المبيعات بالساعة
+                      </h4>
+                      <div
+                        className="flex items-end gap-0.5 rounded-lg border p-3"
+                        style={{
+                          borderColor: T.border,
+                          background: T.surfaceDeep,
+                          height: "160px",
+                        }}
+                      >
+                        {Array.from({ length: 24 }, (_, hour) => {
+                          const data = stats.hourlySales.find(
+                            (h) => h.hour === hour,
+                          );
+                          const total = data?.total ?? 0;
+                          const maxTotal = Math.max(
+                            ...stats.hourlySales.map((h) => h.total),
+                            1,
+                          );
+                          const heightPct =
+                            total > 0
+                              ? Math.max((total / maxTotal) * 100, 8)
+                              : 2;
+                          return (
+                            <div
+                              key={hour}
+                              className="group relative flex flex-1 flex-col items-center justify-end"
+                              style={{ height: "100%" }}
+                            >
+                              <div
+                                className="pointer-events-none absolute -top-8 z-10 rounded-md px-2 py-1 text-xs opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
+                                style={{
+                                  background: T.surfaceHover,
+                                  color: T.accentLight,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {`${hour}:00 — ${total.toFixed(2)} د.ل`}
+                              </div>
+                              <div
+                                className="hourly-bar w-full"
+                                style={{
+                                  height: `${heightPct}%`,
+                                  background:
+                                    total > 0
+                                      ? `linear-gradient(180deg, ${T.accent} 0%, hsl(200 80% 35%) 100%)`
+                                      : T.surfaceHover,
+                                }}
+                              />
+                              <span
+                                className="mt-1 text-[9px]"
+                                style={{ color: T.textDim }}
+                              >
+                                {hour % 3 === 0 ? `${hour}` : ""}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      {topProductsData.slice(0, 4).map((item, i) => (
-                        <div key={i} className="flex items-center gap-1 text-xs">
-                          <div className="h-2 w-2 rounded-full" style={{ background: CHART_COLORS[i] }} />
-                          <span style={{ color: T.textMuted }}>{item.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Payment Methods Pie Chart */}
-                  <div className="admin-panel p-5">
-                    <h3 className="mb-4 flex items-center gap-2 text-sm font-bold" style={{ color: T.accentLight }}>
-                      <CreditCard className="h-4 w-4" />
-                      طرق الدفع
-                    </h3>
-                    <div className="h-40 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsPieChart>
-                          <Pie
-                            data={paymentMethodsData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={30}
-                            outerRadius={60}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                            labelLine={{ stroke: T.textMuted }}
-                          >
-                            {paymentMethodsData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index + 3]} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{
-                              background: T.surface,
-                              borderColor: T.border,
-                              borderRadius: '8px',
-                              color: T.text,
-                            }}
-                          />
-                        </RechartsPieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </section>
 
-              {/* --- Store Statistics Section --- */}
+              {/* --- Website Statistics --- */}
               <section>
-                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold" style={{ color: T.accentLight }}>
-                  <Store className="h-5 w-5" />
-                  إحصائيات المتجر
+                <h2
+                  className="mb-4 flex items-center gap-2 text-lg font-bold"
+                  style={{ color: T.accentLight }}
+                >
+                  <BarChart3 className="h-5 w-5" />
+                  إحصائيات الموقع
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <StoreStat
-                    icon={<DollarSign className="h-5 w-5" />}
+                  <AnimatedStatCard
+                    index={0}
+                    icon={<TrendingUp className="h-6 w-6" />}
+                    label="مبيعات اليوم"
+                    value={stats.todaySales}
+                    isCurrency
+                  />
+                  <AnimatedStatCard
+                    index={1}
+                    icon={<BarChart3 className="h-6 w-6" />}
+                    label="مبيعات الشهر"
+                    value={stats.monthlySales}
+                    isCurrency
+                  />
+                  <AnimatedStatCard
+                    index={2}
+                    icon={<Package className="h-6 w-6" />}
+                    label="الطلبات المكتملة"
+                    value={stats.totalOrders}
+                  />
+                  <AnimatedStatCard
+                    index={3}
+                    icon={<Clock className="h-6 w-6" />}
+                    label="طلبات قيد الانتظار"
+                    value={stats.pendingOrders}
+                    accent="amber"
+                  />
+                  <AnimatedStatCard
+                    index={4}
+                    icon={<Ban className="h-6 w-6" />}
+                    label="الطلبات الملغية"
+                    value={stats.cancelledOrders}
+                    accent="red"
+                  />
+                  <AnimatedStatCard
+                    index={5}
+                    icon={<Users className="h-6 w-6" />}
+                    label="إجمالي العملاء"
+                    value={stats.totalCustomers}
+                  />
+                </div>
+              </section>
+
+              {/* --- Store Statistics --- */}
+              <section>
+                <h2
+                  className="mb-4 flex items-center gap-2 text-lg font-bold"
+                  style={{ color: T.accentLight }}
+                >
+                  <Store className="h-5 w-5" /> إحصائيات المتجر
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <AnimatedStatCard
+                    index={0}
+                    icon={<DollarSign className="h-6 w-6" />}
                     label="إجمالي الإيرادات"
                     value={stats.storeStats.totalRevenue}
                     isCurrency
-                    color="#7B1E2F"
+                    accent="green"
                   />
-                  <StoreStat
-                    icon={<BarChart3 className="h-5 w-5" />}
+                  <AnimatedStatCard
+                    index={1}
+                    icon={<BarChart3 className="h-6 w-6" />}
                     label="متوسط قيمة الطلب"
                     value={stats.storeStats.avgOrderValue}
                     isCurrency
-                    color="#C5A55A"
                   />
-                  <StoreStat
-                    icon={<Truck className="h-5 w-5" />}
+                  <AnimatedStatCard
+                    index={2}
+                    icon={<Truck className="h-6 w-6" />}
                     label="إجمالي رسوم التوصيل"
                     value={stats.storeStats.totalDeliveryFees}
                     isCurrency
-                    color="#E0C97B"
                   />
-                  <StoreStat
-                    icon={<MapPin className="h-5 w-5" />}
+                  <StatCardText
+                    index={3}
+                    icon={<MapPin className="h-6 w-6" />}
                     label="أكثر مدينة طلباً"
-                    value={stats.storeStats.topCity ? `${stats.storeStats.topCity.name} (${stats.storeStats.topCity.count})` : "لا بيانات"}
-                    color="#9F4A5A"
+                    value={
+                      stats.storeStats.topCity
+                        ? `${stats.storeStats.topCity.name} (${stats.storeStats.topCity.count})`
+                        : "لا بيانات"
+                    }
                   />
-                  <StoreStat
-                    icon={<Star className="h-5 w-5" />}
+                  <StatCardText
+                    index={4}
+                    icon={<Star className="h-6 w-6" />}
                     label="أكثر منتج مبيعاً"
-                    value={stats.storeStats.topProduct ? `${stats.storeStats.topProduct.name} (${stats.storeStats.topProduct.qty})` : "لا بيانات"}
-                    color="#B88B4A"
-                  />
-                  <StoreStat
-                    icon={<Award className="h-5 w-5" />}
-                    label="تقييم المتجر"
-                    value="4.8 / 5.0"
-                    color="#5A3E2E"
+                    value={
+                      stats.storeStats.topProduct
+                        ? `${stats.storeStats.topProduct.name} (${stats.storeStats.topProduct.qty})`
+                        : "لا بيانات"
+                    }
                   />
                 </div>
               </section>
 
               {/* --- Print Sales Reports --- */}
               <section>
-                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold" style={{ color: T.accentLight }}>
-                  <Printer className="h-5 w-5" />
-                  تقارير المبيعات
+                <h2
+                  className="mb-4 flex items-center gap-2 text-lg font-bold"
+                  style={{ color: T.accentLight }}
+                >
+                  <Printer className="h-5 w-5" /> تقارير المبيعات
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <PrintButton
+                  <PrintSalesButton
                     period="daily"
-                    label="تقرير اليوم"
-                    sublabel="تفاصيل مبيعات اليوم"
+                    label="طباعة مبيعات اليوم"
                     icon={<TrendingUp className="h-5 w-5" />}
-                    color="from-blue-500 to-cyan-500"
                   />
-                  <PrintButton
+                  <PrintSalesButton
                     period="monthly"
-                    label="تقرير الشهر"
-                    sublabel="ملخص مبيعات الشهر"
-                    icon={<CalendarDays className="h-5 w-5" />}
-                    color="from-purple-500 to-pink-500"
+                    label="طباعة مبيعات الشهر"
+                    icon={<BarChart3 className="h-5 w-5" />}
                   />
-                  <PrintButton
+                  <PrintSalesButton
                     period="yearly"
-                    label="تقرير السنة"
-                    sublabel="إحصائيات السنة"
+                    label="طباعة مبيعات السنة"
                     icon={<Calendar className="h-5 w-5" />}
-                    color="from-amber-500 to-orange-500"
                   />
                 </div>
               </section>
@@ -1612,6 +1270,18 @@ export default function AdminDashboard() {
           {/* ========== ORDERS TAB ========== */}
           {activeTab === "orders" &&
             (() => {
+              console.log("📦 جميع الطلبات:", orders);
+              if (orders.length > 0) {
+                console.log("📋 الطلب الأول:", orders[0]);
+                console.log("🛒 عناصر الطلب الأول:", orders[0].items);
+                if (orders[0].items?.length > 0) {
+                  console.log("🔍 أول عنصر:", orders[0].items[0]);
+                  console.log(
+                    "✨ الخيارات:",
+                    orders[0].items[0].selected_options,
+                  );
+                }
+              }
               const filteredOrders = orders
                 .filter(
                   (o) =>
@@ -1624,46 +1294,63 @@ export default function AdminDashboard() {
                   const db = new Date(b.created_at).getTime();
                   return orderSortDir === "desc" ? db - da : da - db;
                 });
+              console.log("جميع الطلبات:", orders);
+              console.log("الطلب الأول:", orders[0]?.items);
+
               return (
                 <div className="flex flex-col gap-4">
                   {/* Date controls */}
-                  <div className="admin-panel p-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
-                        <Calendar className="h-4 w-4" style={{ color: T.accentLight }} />
-                        <span className="text-xs font-medium" style={{ color: T.textMuted }}>
-                          ترتيب:
-                        </span>
-                        <button
-                          onClick={() => setOrderSortDir(orderSortDir === "desc" ? "asc" : "desc")}
-                          className="flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-xs transition-all hover:bg-white/20"
-                          style={{ color: T.accentLight }}
-                        >
-                          {orderSortDir === "desc" ? "الأحدث ↓" : "الأقدم ↑"}
-                        </button>
-                      </div>
+                  <div className="admin-panel animate-slide-up-fade">
+                    <div className="relative z-10 flex flex-wrap items-center gap-3 p-4">
                       <div className="flex items-center gap-2">
-                        <input
-                          type="date"
-                          value={orderDateFilter}
-                          onChange={(e) => setOrderDateFilter(e.target.value)}
-                          className="rounded-lg border px-3 py-2 text-xs outline-none"
-                          style={{
-                            borderColor: T.border,
-                            background: T.surface,
-                            color: T.text,
-                          }}
+                        <Calendar
+                          className="h-4 w-4"
+                          style={{ color: T.accentLight }}
                         />
-                        {orderDateFilter && (
-                          <button
-                            onClick={() => setOrderDateFilter("")}
-                            className="flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400 transition-all hover:bg-red-500/10"
-                          >
-                            <RotateCcw className="h-3 w-3" /> مسح
-                          </button>
-                        )}
+                        <span
+                          className="text-xs font-semibold"
+                          style={{ color: T.textMuted }}
+                        >
+                          ترتيب حسب التاريخ:
+                        </span>
                       </div>
-                      <span className="mr-auto text-xs" style={{ color: T.textDim }}>
+                      <button
+                        onClick={() =>
+                          setOrderSortDir(
+                            orderSortDir === "desc" ? "asc" : "desc",
+                          )
+                        }
+                        className="admin-btn-glow flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors"
+                        style={{ borderColor: T.border, color: T.accentLight }}
+                      >
+                        {orderSortDir === "desc"
+                          ? "الأحدث أولاً ↓"
+                          : "الأقدم أولاً ↑"}
+                      </button>
+                      <input
+                        type="date"
+                        value={orderDateFilter}
+                        onChange={(e) => setOrderDateFilter(e.target.value)}
+                        className="rounded-lg border px-3 py-1.5 text-xs outline-none"
+                        style={{
+                          borderColor: T.border,
+                          background: T.surface,
+                          color: T.text,
+                        }}
+                      />
+                      {orderDateFilter && (
+                        <button
+                          onClick={() => setOrderDateFilter("")}
+                          className="admin-btn-glow flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition-colors"
+                          style={{ borderColor: T.border, color: T.textMuted }}
+                        >
+                          <RotateCcw className="h-3 w-3" /> مسح الفلتر
+                        </button>
+                      )}
+                      <span
+                        className="mr-auto text-xs"
+                        style={{ color: T.textDim }}
+                      >
                         {filteredOrders.length === orders.length
                           ? `إجمالي: ${orders.length} طلب`
                           : `${filteredOrders.length} من ${orders.length} طلب`}
@@ -1681,13 +1368,242 @@ export default function AdminDashboard() {
                     />
                   ) : (
                     filteredOrders.map((order, idx) => (
-                      <OrderCard
+                      <div
                         key={order.id}
-                        order={order}
-                        index={idx}
-                        onStatusChange={updateOrderStatus}
-                        onPrint={printInvoice}
-                      />
+                        className="admin-card animate-card-enter p-6"
+                        style={{
+                          animationDelay: `${idx * 60}ms`,
+                          animationFillMode: "backwards",
+                        }}
+                      >
+                        <div className="relative z-10">
+                          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                              <div className="flex items-center gap-3">
+                                <h3
+                                  className="text-lg font-bold"
+                                  style={{ color: T.text }}
+                                >
+                                  {"طلب #"}
+                                  {order.id}
+                                </h3>
+                                {getStatusBadge(order.status)}
+                              </div>
+                              <p
+                                className="mt-1 text-sm"
+                                style={{ color: T.textDim }}
+                              >
+                                {new Date(order.created_at).toLocaleString(
+                                  "ar-LY",
+                                )}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => printInvoice(order)}
+                              className="admin-btn-glow flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition-colors"
+                              style={{
+                                borderColor: T.border,
+                                color: T.accentLight,
+                              }}
+                            >
+                              <Printer className="h-4 w-4" /> طباعة الفاتورة
+                            </button>
+                          </div>
+
+                          <div className="mb-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                            <InfoItem
+                              label="العميل"
+                              value={order.customer_name}
+                            />
+                            <InfoItem
+                              label="الهاتف"
+                              value={order.phone}
+                              dir="ltr"
+                            />
+                            {order.secondary_phone && (
+                              <InfoItem
+                                label="هاتف ثانوي"
+                                value={order.secondary_phone}
+                                dir="ltr"
+                              />
+                            )}
+                            <InfoItem label="العنوان" value={order.address} />
+                            <InfoItem label="المدينة" value={order.city} />
+                            <InfoItem
+                              label="الدفع"
+                              value={
+                                order.payment_method === "card"
+                                  ? "بطاقة بنكية"
+                                  : order.payment_method === "cash"
+                                    ? "الدفع عند الاستلام"
+                                    : "تحويل LYPAY"
+                              }
+                            />
+                          </div>
+
+                          <div
+                            className="mb-4 overflow-x-auto rounded-xl border"
+                            style={{ borderColor: T.border }}
+                          >
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr
+                                  style={{
+                                    background: T.surfaceDeep,
+                                    borderBottom: `1px solid ${T.border}`,
+                                  }}
+                                >
+                                  <th
+                                    className="px-4 py-2 text-right"
+                                    style={{ color: T.accentLight }}
+                                  >
+                                    المنتج
+                                  </th>
+                                  <th
+                                    className="px-4 py-2 text-center"
+                                    style={{ color: T.accentLight }}
+                                  >
+                                    الكمية
+                                  </th>
+                                  <th
+                                    className="px-4 py-2 text-center"
+                                    style={{ color: T.accentLight }}
+                                  >
+                                    السعر
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {order.items?.map((item) => (
+                                  <tr
+                                    key={item.id}
+                                    className="admin-row-hover"
+                                    style={{
+                                      borderBottom: `1px solid hsl(200 80% 55% / 0.05)`,
+                                    }}
+                                  >
+                                  <td className="px-4 py-2" style={{ color: T.text }}>
+  <div className="font-medium">{item.product_name}</div>
+  {(() => {
+    // التعامل مع selected_options بأنواعها المختلفة
+    let options = item.selected_options;
+    
+    // إذا كانت نصاً، نحولها لمصفوفة
+    if (typeof options === 'string') {
+      try {
+        options = JSON.parse(options);
+      } catch (e) {
+        options = [];
+      }
+    }
+    
+    // إذا كانت مصفوفة وفيها عناصر، نعرضها
+    if (Array.isArray(options) && options.length > 0) {
+      return (
+        <div className="mt-2 space-y-1">
+          {options.map((opt: any, idx: number) => (
+            <div key={idx} className="flex items-center text-xs text-[var(--gold)]/80">
+              <span className="ml-2">•</span>
+              <span>{opt.name}</span>
+              <span className="mr-1 text-[var(--gold)]/60">
+                (+{opt.price} د.ل)
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    return null;
+  })()}
+</td>
+                                    <td
+                                      className="px-4 py-2 text-center"
+                                      style={{ color: T.text }}
+                                    >
+                                      {item.quantity}
+                                    </td>
+                                    <td
+                                      className="px-4 py-2 text-center"
+                                      style={{ color: T.accentLight }}
+                                    >
+                                      {Number(item.unit_price).toFixed(2)} د.ل
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex items-center gap-6 text-sm">
+                              <span style={{ color: T.textMuted }}>
+                                {"توصيل: "}
+                                <b style={{ color: T.accentLight }}>
+                                  {Number(order.delivery_fee).toFixed(2)} د.ل
+                                </b>
+                              </span>
+                              <span style={{ color: T.textMuted }}>
+                                {"الإجمالي: "}
+                                <b
+                                  className="text-base"
+                                  style={{ color: T.text }}
+                                >
+                                  {Number(order.total_amount).toFixed(2)} د.ل
+                                </b>
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              {order.status === "pending" && (
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      updateOrderStatus(order.id, "confirmed")
+                                    }
+                                    className="admin-btn-glow flex items-center gap-1 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs text-emerald-400 hover:bg-emerald-500/25"
+                                  >
+                                    <CheckCircle className="h-3.5 w-3.5" />{" "}
+                                    تأكيد
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      updateOrderStatus(order.id, "cancelled")
+                                    }
+                                    className="admin-btn-glow flex items-center gap-1 rounded-lg bg-red-500/15 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/25"
+                                  >
+                                    <XCircle className="h-3.5 w-3.5" /> إلغاء
+                                  </button>
+                                </>
+                              )}
+                              {order.status === "confirmed" && (
+                                <button
+                                  onClick={() =>
+                                    updateOrderStatus(order.id, "preparing")
+                                  }
+                                  className="admin-btn-glow flex items-center gap-1 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs text-sky-400 hover:bg-sky-500/25"
+                                >
+                                  <Clock className="h-3.5 w-3.5" /> قيد التحضير
+                                </button>
+                              )}
+                              {order.status === "preparing" && (
+                                <button
+                                  onClick={() =>
+                                    updateOrderStatus(order.id, "delivered")
+                                  }
+                                  className="admin-btn-glow flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs hover:opacity-80"
+                                  style={{
+                                    background: "hsl(200 80% 55% / 0.15)",
+                                    color: T.accentLight,
+                                  }}
+                                >
+                                  <CheckCircle className="h-3.5 w-3.5" /> تم
+                                  التوصيل
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     ))
                   )}
                 </div>
@@ -1752,12 +1668,198 @@ export default function AdminDashboard() {
 
           {/* ========== CUSTOMERS TAB ========== */}
           {activeTab === "customers" && (
-            <CustomerList
-              customers={customers}
-              filteredCustomers={filteredCustomers}
-              customerSearch={customerSearch}
-              setCustomerSearch={setCustomerSearch}
-            />
+            <div className="flex flex-col gap-5">
+              {/* Header with stats */}
+              <div className="admin-panel animate-slide-up-fade">
+                <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 p-5">
+                  <div>
+                    <h2
+                      className="text-lg font-bold"
+                      style={{ color: T.accentLight }}
+                    >
+                      إدارة العملاء
+                    </h2>
+                    <p className="mt-1 text-xs" style={{ color: T.textDim }}>
+                      {"إجمالي: "}
+                      {customers.length}
+                      {" عميل"}
+                      {customerSearch &&
+                        ` | نتائج البحث: ${filteredCustomers.length}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="rounded-lg px-3 py-1.5 text-center"
+                      style={{
+                        background: "hsl(200 80% 55% / 0.1)",
+                        border: `1px solid hsl(200 80% 55% / 0.15)`,
+                      }}
+                    >
+                      <p className="text-xs" style={{ color: T.textDim }}>
+                        مسجلين
+                      </p>
+                      <p
+                        className="text-base font-bold"
+                        style={{ color: T.accentLight }}
+                      >
+                        {customers.length}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search bar */}
+              <div className="relative animate-slide-up-fade">
+                <Search
+                  className="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2"
+                  style={{ color: T.textDim }}
+                />
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  placeholder="بحث بالاسم، الهاتف، الموقع، البريد، أو عنوان IP..."
+                  className="w-full rounded-xl border py-3 pr-11 pl-4 text-sm outline-none transition-all duration-300 focus:shadow-lg"
+                  style={{
+                    borderColor: T.border,
+                    background: T.surface,
+                    color: T.text,
+                  }}
+                />
+              </div>
+
+              {filteredCustomers.length === 0 ? (
+                <EmptyState
+                  text={
+                    customerSearch
+                      ? "لا توجد نتائج مطابقة"
+                      : "لا يوجد عملاء مسجلين"
+                  }
+                />
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredCustomers.map((customer, i) => (
+                    <div
+                      key={customer.id}
+                      className="admin-card animate-card-enter p-5"
+                      style={{
+                        animationDelay: `${i * 40}ms`,
+                        animationFillMode: "backwards",
+                      }}
+                    >
+                      <div className="relative z-10">
+                        {/* Customer name and number */}
+                        <div className="mb-3 flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                              style={{ background: "hsl(200 80% 55% / 0.12)" }}
+                            >
+                              <span
+                                className="text-sm font-bold"
+                                style={{ color: T.accentLight }}
+                              >
+                                {customer.name.charAt(0)}
+                              </span>
+                            </div>
+                            <div>
+                              <h3
+                                className="text-sm font-bold"
+                                style={{ color: T.text }}
+                              >
+                                {customer.name}
+                              </h3>
+                              <p
+                                className="font-mono text-xs"
+                                style={{ color: T.textMuted }}
+                                dir="ltr"
+                              >
+                                {customer.phone}
+                              </p>
+                            </div>
+                          </div>
+                          <span
+                            className="rounded-md px-2 py-0.5 text-[10px] font-medium"
+                            style={{
+                              background: "hsl(200 80% 55% / 0.1)",
+                              color: T.accentMuted,
+                            }}
+                          >
+                            {"#"}
+                            {i + 1}
+                          </span>
+                        </div>
+
+                        {/* Info grid */}
+                        <div className="space-y-2 text-xs">
+                          {customer.city && (
+                            <div className="flex items-center gap-2">
+                              <MapPin
+                                className="h-3.5 w-3.5 shrink-0"
+                                style={{ color: T.textDim }}
+                              />
+                              <span style={{ color: T.textMuted }}>
+                                {customer.city}
+                              </span>
+                            </div>
+                          )}
+                          {customer.email && (
+                            <div className="flex items-center gap-2" dir="ltr">
+                              <Globe
+                                className="h-3.5 w-3.5 shrink-0"
+                                style={{ color: T.textDim }}
+                              />
+                              <span style={{ color: T.textMuted }}>
+                                {customer.email}
+                              </span>
+                            </div>
+                          )}
+                          {customer.address && (
+                            <div className="flex items-center gap-2">
+                              <Store
+                                className="h-3.5 w-3.5 shrink-0"
+                                style={{ color: T.textDim }}
+                              />
+                              <span style={{ color: T.textMuted }}>
+                                {customer.address}
+                              </span>
+                            </div>
+                          )}
+                          {/* Status and date */}
+                          <div
+                            className="flex items-center justify-between pt-1"
+                            style={{
+                              borderTop: `1px solid hsl(200 80% 55% / 0.06)`,
+                            }}
+                          >
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${customer.is_active ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}
+                            >
+                              {customer.is_active ? "نشط" : "معطل"}
+                            </span>
+                            <span
+                              className="text-[10px]"
+                              style={{ color: T.textDim }}
+                            >
+                              <Calendar className="mr-1 inline h-3 w-3" />
+                              {new Date(customer.created_at).toLocaleDateString(
+                                "ar-LY",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -1765,89 +1867,127 @@ export default function AdminDashboard() {
   );
 }
 
-/* ============ New Components ============ */
+/* ============ Filter Sub-Components ============ */
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label
+        className="text-[11px] font-medium"
+        style={{ color: T.accentMuted }}
+      >
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`rounded-md border text-xs transition-all duration-300 ${value ? "filter-active-glow" : ""}`}
+        style={{
+          background: T.surfaceHover,
+          borderColor: T.border,
+          color: T.text,
+        }}
+      >
+        <option value="">الكل</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
-// Compact Stat for Filter Summary
-function CompactStat({ label, value, isCurrency, color }: { label: string; value: number; isCurrency?: boolean; color: string }) {
+function FilterResultCard({
+  label,
+  value,
+  isCurrency,
+  color,
+}: {
+  label: string;
+  value: number;
+  isCurrency?: boolean;
+  color: string;
+}) {
   const animated = useCountUp(value, 700);
   return (
-    <div className="rounded-lg p-2 text-center" style={{ background: `${color}15` }}>
-      <p className="text-[10px]" style={{ color: `${color}cc` }}>{label}</p>
-      <p className="text-sm font-bold" style={{ color }}>
-        {isCurrency ? `${animated.toFixed(2)} د.ل` : Math.round(animated)}
+    <div
+      className="rounded-md border p-2.5 text-center transition-all duration-300"
+      style={{ borderColor: `${color}20`, background: `${color}08` }}
+    >
+      <p className="mb-0.5 text-[11px]" style={{ color: `${color}99` }}>
+        {label}
+      </p>
+      <p className="text-base font-bold" style={{ color }}>
+        {isCurrency
+          ? `${animated.toFixed(2)} د.ل`
+          : String(Math.round(animated))}
       </p>
     </div>
   );
 }
 
-// Main KPI Card with Filter Integration
-function MainKpiCard({ 
-  title, 
-  value, 
-  filteredValue, 
-  icon, 
-  color, 
-  isCurrency 
-}: { 
-  title: string; 
-  value: number; 
-  filteredValue?: number; 
-  icon: React.ReactNode; 
-  color: string; 
-  isCurrency?: boolean; 
+/* ============ Animated Stat Card ============ */
+function AnimatedStatCard({
+  icon,
+  label,
+  value,
+  isCurrency,
+  accent,
+  index = 0,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  isCurrency?: boolean;
+  accent?: "red" | "green" | "amber";
+  index?: number;
 }) {
   const animated = useCountUp(value, 900);
-  const filteredAnimated = filteredValue !== undefined ? useCountUp(filteredValue, 900) : null;
-
+  const accentColors: Record<string, string> = {
+    red: "bg-red-500/10 text-red-400",
+    green: "bg-emerald-500/10 text-emerald-400",
+    amber: "bg-amber-500/10 text-amber-400",
+  };
+  const cls = accent
+    ? accentColors[accent]
+    : "text-[var(--admin-accent-light)]";
+  const iconBg = accent ? "" : "bg-[hsl(200_80%_55%_/_0.1)]";
   return (
-    <div className="admin-card relative overflow-hidden p-4 transition-all hover:scale-[1.02]">
-      <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-5`} />
-      <div className="relative z-10">
-        <div className="mb-2 flex items-center justify-between">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${color} bg-opacity-20`}>
-            <div className="text-white">{icon}</div>
-          </div>
-          {filteredValue !== undefined && (
-            <span className="rounded-full bg-[#7B1E2F] px-2 py-0.5 text-[8px] text-[#E0C97B]">
-              مفلتر
-            </span>
-          )}
-        </div>
-        <p className="text-xs" style={{ color: T.textMuted }}>{title}</p>
-        <div className="flex items-baseline gap-2">
-          <p className="text-lg font-bold" style={{ color: T.text }}>
-            {isCurrency ? `${animated.toFixed(2)} د.ل` : Math.round(animated)}
-          </p>
-          {filteredValue !== undefined && (
-            <>
-              <span className="text-xs" style={{ color: T.textDim }}>→</span>
-              <p className="text-sm font-bold" style={{ color: '#7B1E2F' }}>
-                {isCurrency ? `${filteredAnimated?.toFixed(2)} د.ل` : Math.round(filteredAnimated || 0)}
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Store Stat Card
-function StoreStat({ icon, label, value, isCurrency, color }: { icon: React.ReactNode; label: string; value: number | string; isCurrency?: boolean; color: string }) {
-  const animated = typeof value === 'number' ? useCountUp(value, 900) : null;
-  
-  return (
-    <div className="admin-card p-5 transition-all hover:scale-[1.02]">
-      <div className="flex items-center gap-4">
-        <div className={`flex h-12 w-12 items-center justify-center rounded-xl`} style={{ background: `${color}20` }}>
-          <div style={{ color }}>{icon}</div>
+    <div
+      className="admin-card group animate-card-enter cursor-default p-6"
+      style={{
+        animationDelay: `${index * 80}ms`,
+        animationFillMode: "backwards",
+      }}
+    >
+      <div className="relative z-10 flex items-center gap-4">
+        <div
+          className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${cls} ${iconBg}`}
+        >
+          {icon}
         </div>
         <div>
-          <p className="text-sm" style={{ color: T.textMuted }}>{label}</p>
-          <p className="text-xl font-bold" style={{ color: T.text }}>
-            {typeof value === 'number' 
-              ? (isCurrency ? `${animated?.toFixed(2)} د.ل` : Math.round(animated || 0))
-              : value}
+          <p className="text-sm" style={{ color: T.textMuted }}>
+            {label}
+          </p>
+          <p
+            className="animate-number-pop text-2xl font-bold"
+            style={{ color: T.text }}
+          >
+            {isCurrency
+              ? `${animated.toFixed(2)} د.ل`
+              : String(Math.round(animated))}
           </p>
         </div>
       </div>
@@ -1855,351 +1995,94 @@ function StoreStat({ icon, label, value, isCurrency, color }: { icon: React.Reac
   );
 }
 
-// Order Card Component
-function OrderCard({ order, index, onStatusChange, onPrint }: { order: Order; index: number; onStatusChange: (id: number, status: string) => void; onPrint: (order: Order) => void }) {
-  function getStatusBadge(status: string) {
-    const s: Record<string, string> = {
-      pending: "bg-amber-500/15 text-amber-400",
-      confirmed: "bg-emerald-500/15 text-emerald-400",
-      preparing: "bg-sky-500/15 text-sky-400",
-      delivered: "bg-cyan-500/15 text-cyan-300",
-      cancelled: "bg-red-500/15 text-red-400",
-    };
-    const l: Record<string, string> = {
-      pending: "قيد الانتظار",
-      confirmed: "مؤكد",
-      preparing: "قيد التحضير",
-      delivered: "تم التوصيل",
-      cancelled: "ملغي",
-    };
-    return (
-      <span
-        className={`rounded-full px-3 py-1 text-xs font-semibold transition-all duration-300 ${s[status] || s.pending}`}
-      >
-        {l[status] || status}
+function StatCardText({
+  icon,
+  label,
+  value,
+  index = 0,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  index?: number;
+}) {
+  return (
+    <div
+      className="admin-card group animate-card-enter cursor-default p-6"
+      style={{
+        animationDelay: `${index * 80}ms`,
+        animationFillMode: "backwards",
+      }}
+    >
+      <div className="relative z-10 flex items-center gap-4">
+        <div
+          className="flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(200_80%_55%_/_0.1)] transition-transform duration-300 group-hover:scale-110"
+          style={{ color: T.accentLight }}
+        >
+          {icon}
+        </div>
+        <div>
+          <p className="text-sm" style={{ color: T.textMuted }}>
+            {label}
+          </p>
+          <p className="text-2xl font-bold" style={{ color: T.text }}>
+            {value}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============ Helpers ============ */
+function InfoItem({
+  label,
+  value,
+  dir,
+}: {
+  label: string;
+  value: string;
+  dir?: string;
+}) {
+  return (
+    <div
+      className="rounded-lg px-3 py-2 transition-all duration-200"
+      style={{ background: T.surfaceDeep }}
+    >
+      <span className="text-xs" style={{ color: T.textDim }}>
+        {label}:{" "}
       </span>
-    );
-  }
-
-  return (
-    <div
-      className="admin-card animate-card-enter overflow-hidden p-6"
-      style={{
-        animationDelay: `${index * 60}ms`,
-        animationFillMode: "backwards",
-      }}
-    >
-      <div className="relative z-10">
-        {/* Order Header */}
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#7B1E2F] to-[#5A0F1F]">
-              <span className="text-lg font-bold text-[#E0C97B]">#{order.id}</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold" style={{ color: T.text }}>
-                  {order.customer_name}
-                </h3>
-                {getStatusBadge(order.status)}
-              </div>
-              <p className="mt-1 text-sm" style={{ color: T.textDim }}>
-                {new Date(order.created_at).toLocaleString("ar-LY", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit"
-                })}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => onPrint(order)}
-            className="group flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition-all hover:bg-white/5"
-            style={{ borderColor: T.border }}
-          >
-            <Printer className="h-4 w-4 transition-transform group-hover:scale-110" style={{ color: T.accentLight }} />
-            <span style={{ color: T.accentLight }}>طباعة الفاتورة</span>
-          </button>
-        </div>
-
-        {/* Customer Info Grid */}
-        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <InfoBadge icon={<Phone className="h-3.5 w-3.5" />} label="الهاتف" value={order.phone} />
-          {order.secondary_phone && (
-            <InfoBadge icon={<Phone className="h-3.5 w-3.5" />} label="هاتف ثانوي" value={order.secondary_phone} />
-          )}
-          <InfoBadge icon={<MapPin className="h-3.5 w-3.5" />} label="المدينة" value={order.city} />
-          <InfoBadge icon={<Wallet className="h-3.5 w-3.5" />} label="الدفع" value={
-            order.payment_method === "card" ? "بطاقة" :
-            order.payment_method === "cash" ? "نقدي" : "LYPAY"
-          } />
-        </div>
-
-        {/* Order Items Table */}
-        <div className="mb-4 overflow-x-auto rounded-xl border" style={{ borderColor: T.border }}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ background: T.surfaceDeep }}>
-                <th className="px-4 py-3 text-right" style={{ color: T.accentLight }}>المنتج</th>
-                <th className="px-4 py-3 text-center" style={{ color: T.accentLight }}>الكمية</th>
-                <th className="px-4 py-3 text-center" style={{ color: T.accentLight }}>السعر</th>
-                <th className="px-4 py-3 text-center" style={{ color: T.accentLight }}>الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.items?.map((item) => (
-                <tr key={item.id} className="border-t" style={{ borderColor: T.border }}>
-                  <td className="px-4 py-3">
-                    <div>
-                      <span style={{ color: T.text }}>{item.product_name}</span>
-                      {item.selected_options && Array.isArray(item.selected_options) && item.selected_options.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {item.selected_options.map((opt: any, idx: number) => (
-                            <span key={idx} className="rounded-full bg-white/5 px-2 py-0.5 text-[10px]" style={{ color: T.accentMuted }}>
-                              {opt.name} +{opt.price} د.ل
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center" style={{ color: T.text }}>{item.quantity}</td>
-                  <td className="px-4 py-3 text-center" style={{ color: T.text }}>{Number(item.unit_price).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-center font-bold" style={{ color: T.accentLight }}>
-                    {(item.quantity * Number(item.unit_price)).toFixed(2)} د.ل
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Order Footer */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
-            <div className="text-sm">
-              <span style={{ color: T.textMuted }}>توصيل: </span>
-              <span className="font-bold" style={{ color: T.accentLight }}>
-                {Number(order.delivery_fee).toFixed(2)} د.ل
-              </span>
-            </div>
-            <div className="text-sm">
-              <span style={{ color: T.textMuted }}>الإجمالي: </span>
-              <span className="text-lg font-bold" style={{ color: T.text }}>
-                {Number(order.total_amount).toFixed(2)} د.ل
-              </span>
-            </div>
-          </div>
-          
-          {/* Status Actions */}
-          <div className="flex gap-2">
-            {order.status === "pending" && (
-              <>
-                <StatusButton
-                  onClick={() => onStatusChange(order.id, "confirmed")}
-                  label="تأكيد"
-                  icon={<CheckCircle className="h-3.5 w-3.5" />}
-                  color="emerald"
-                />
-                <StatusButton
-                  onClick={() => onStatusChange(order.id, "cancelled")}
-                  label="إلغاء"
-                  icon={<XCircle className="h-3.5 w-3.5" />}
-                  color="red"
-                />
-              </>
-            )}
-            {order.status === "confirmed" && (
-              <StatusButton
-                onClick={() => onStatusChange(order.id, "preparing")}
-                label="قيد التحضير"
-                icon={<Clock className="h-3.5 w-3.5" />}
-                color="sky"
-              />
-            )}
-            {order.status === "preparing" && (
-              <StatusButton
-                onClick={() => onStatusChange(order.id, "delivered")}
-                label="تم التوصيل"
-                icon={<CheckCircle className="h-3.5 w-3.5" />}
-                color="cyan"
-              />
-            )}
-          </div>
-        </div>
-      </div>
+      <span style={{ color: T.text }} dir={dir}>
+        {value}
+      </span>
     </div>
   );
 }
 
-// Customer List Component
-function CustomerList({ customers, filteredCustomers, customerSearch, setCustomerSearch }: { customers: Customer[]; filteredCustomers: Customer[]; customerSearch: string; setCustomerSearch: (s: string) => void }) {
+function EmptyState({ text }: { text: string }) {
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header with stats */}
-      <div className="admin-panel p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold" style={{ color: T.accentLight }}>
-              إدارة العملاء
-            </h2>
-            <p className="mt-1 text-sm" style={{ color: T.textDim }}>
-              إجمالي: {customers.length} عميل
-              {customerSearch && ` | نتائج البحث: ${filteredCustomers.length}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-gradient-to-br from-[#7B1E2F] to-[#5A0F1F] px-4 py-2">
-              <p className="text-xs text-[#E0C97B]">مسجلين</p>
-              <p className="text-xl font-bold text-[#E0C97B]">{customers.length}</p>
-            </div>
-          </div>
-        </div>
+    <div className="flex animate-fade-in flex-col items-center justify-center py-16">
+      <div
+        className="mb-4 flex h-16 w-16 animate-glow-breathe items-center justify-center rounded-full"
+        style={{ background: "hsl(200 80% 55% / 0.1)" }}
+      >
+        <ShoppingBag className="h-8 w-8" style={{ color: T.textDim }} />
       </div>
-
-      {/* Search bar */}
-      <div className="relative">
-        <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: T.textDim }} />
-        <input
-          type="text"
-          value={customerSearch}
-          onChange={(e) => setCustomerSearch(e.target.value)}
-          placeholder="بحث بالاسم، الهاتف، البريد الإلكتروني..."
-          className="w-full rounded-xl border py-4 pr-11 pl-4 text-sm outline-none transition-all duration-300 focus:shadow-lg"
-          style={{
-            borderColor: T.border,
-            background: T.surface,
-            color: T.text,
-          }}
-        />
-      </div>
-
-      {filteredCustomers.length === 0 ? (
-        <EmptyState text={customerSearch ? "لا توجد نتائج مطابقة" : "لا يوجد عملاء مسجلين"} />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredCustomers.map((customer, i) => (
-            <CustomerCard key={customer.id} customer={customer} index={i} />
-          ))}
-        </div>
-      )}
+      <p style={{ color: T.textMuted }}>{text}</p>
     </div>
   );
 }
 
-// Customer Card Component
-function CustomerCard({ customer, index }: { customer: Customer; index: number }) {
-  return (
-    <div
-      className="admin-card group animate-card-enter overflow-hidden p-5 transition-all duration-300 hover:scale-[1.02]"
-      style={{
-        animationDelay: `${index * 40}ms`,
-        animationFillMode: "backwards",
-      }}
-    >
-      <div className="relative z-10">
-        {/* Customer Header */}
-        <div className="mb-4 flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#7B1E2F] to-[#5A0F1F]">
-              <span className="text-lg font-bold text-[#E0C97B]">
-                {customer.name.charAt(0)}
-              </span>
-            </div>
-            <div>
-              <h3 className="font-bold" style={{ color: T.text }}>
-                {customer.name}
-              </h3>
-              <p className="font-mono text-sm" style={{ color: T.accentMuted }} dir="ltr">
-                {customer.phone}
-              </p>
-            </div>
-          </div>
-          <span
-            className={`rounded-full px-2 py-1 text-xs font-medium ${
-              customer.is_active ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'
-            }`}
-          >
-            {customer.is_active ? 'نشط' : 'معطل'}
-          </span>
-        </div>
-
-        {/* Customer Details */}
-        <div className="space-y-2 text-sm">
-          {customer.email && (
-            <div className="flex items-center gap-2 rounded-lg bg-white/5 p-2">
-              <Globe className="h-4 w-4" style={{ color: T.accentMuted }} />
-              <span style={{ color: T.textMuted }}>{customer.email}</span>
-            </div>
-          )}
-          {customer.city && (
-            <div className="flex items-center gap-2 rounded-lg bg-white/5 p-2">
-              <MapPin className="h-4 w-4" style={{ color: T.accentMuted }} />
-              <span style={{ color: T.textMuted }}>{customer.city}</span>
-            </div>
-          )}
-          {customer.address && (
-            <div className="flex items-center gap-2 rounded-lg bg-white/5 p-2">
-              <Store className="h-4 w-4" style={{ color: T.accentMuted }} />
-              <span style={{ color: T.textMuted }}>{customer.address}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-4 flex items-center justify-between border-t pt-3" style={{ borderColor: T.border }}>
-          <span className="text-xs" style={{ color: T.textDim }}>
-            <Calendar className="ml-1 inline h-3 w-3" />
-            {new Date(customer.created_at).toLocaleDateString("ar-LY", {
-              year: "numeric",
-              month: "short",
-              day: "numeric"
-            })}
-          </span>
-          <span className="text-xs" style={{ color: T.textDim }}>
-            #{customer.id}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Helper Components
-function InfoBadge({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 rounded-lg bg-white/5 p-2">
-      <div style={{ color: T.accentMuted }}>{icon}</div>
-      <div>
-        <span className="text-xs" style={{ color: T.textDim }}>{label}: </span>
-        <span className="text-sm" style={{ color: T.text }}>{value}</span>
-      </div>
-    </div>
-  );
-}
-
-function StatusButton({ onClick, label, icon, color }: { onClick: () => void; label: string; icon: React.ReactNode; color: string }) {
-  const colorMap: Record<string, { bg: string; text: string }> = {
-    emerald: { bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
-    red: { bg: 'bg-red-500/15', text: 'text-red-400' },
-    sky: { bg: 'bg-sky-500/15', text: 'text-sky-400' },
-    cyan: { bg: 'bg-cyan-500/15', text: 'text-cyan-400' },
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-all hover:scale-105 ${colorMap[color].bg} ${colorMap[color].text}`}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
-
-function PrintButton({ period, label, sublabel, icon, color }: { period: string; label: string; sublabel: string; icon: React.ReactNode; color: string }) {
+/* ============ Print Sales Report Button ============ */
+function PrintSalesButton({
+  period,
+  label,
+  icon,
+}: {
+  period: string;
+  label: string;
+  icon: React.ReactNode;
+}) {
   const [loading, setLoading] = useState(false);
   const periodLabels: Record<string, string> = {
     daily: "اليوم",
@@ -2315,34 +2198,32 @@ function PrintButton({ period, label, sublabel, icon, color }: { period: string;
     <button
       onClick={handlePrint}
       disabled={loading}
-      className="admin-card group relative overflow-hidden p-5 transition-all duration-300 hover:scale-[1.02]"
+      className="admin-card group flex cursor-pointer items-center gap-4 p-5 transition-all duration-300 hover:scale-[1.02]"
+      style={{ border: "none" }}
     >
-      <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-10 transition-opacity duration-300 group-hover:opacity-20`} />
-      
-      <div className="relative z-10 flex items-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
+      <div className="relative z-10 flex w-full items-center gap-4">
+        <div
+          className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+          style={{ background: "hsl(200 80% 55% / 0.1)", color: T.accentLight }}
+        >
           {loading ? (
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            <span
+              className="h-5 w-5 animate-spin rounded-full border-2"
+              style={{ borderColor: "transparent", borderTopColor: T.accent }}
+            />
           ) : (
-            <div className="text-white">{icon}</div>
+            icon
           )}
         </div>
         <div className="text-right">
-          <p className="text-sm font-semibold" style={{ color: T.text }}>{label}</p>
-          <p className="text-xs" style={{ color: T.textDim }}>{sublabel}</p>
+          <p className="text-sm font-semibold" style={{ color: T.text }}>
+            {label}
+          </p>
+          <p className="text-xs" style={{ color: T.textDim }}>
+            تقرير {periodLabels[period]}
+          </p>
         </div>
       </div>
     </button>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20">
-      <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/5">
-        <ShoppingBag className="h-10 w-10" style={{ color: T.textDim }} />
-      </div>
-      <p style={{ color: T.textMuted }}>{text}</p>
-    </div>
   );
 }

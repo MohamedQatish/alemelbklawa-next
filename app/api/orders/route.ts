@@ -1,10 +1,33 @@
-import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
-import { calculateProductPrice } from "@/lib/pricing"
+import { NextResponse } from "next/server";
+import { sql } from "@/lib/db";
+import { calculateProductPrice } from "@/lib/pricing";
+
+// تعريف نوع لعناصر الطلب
+interface OrderItem {
+  productId: number;
+  product_name?: string;
+  category?: string;
+  quantity: number;
+  price?: number;
+  selectedOptions?: Array<{ optionId: number; name?: string; price?: number }>;
+  notes?: string;
+}
+
+// تعريف نوع لبيانات العنصر المحضرة
+interface PreparedOrderItem {
+  product_name: string;
+  category: string;
+  quantity: number;
+  unit_price: number;
+  selected_options: string;
+  product_price_snapshot: number;
+  final_price_snapshot: number;
+  notes: string | null;
+}
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
+    const body = await req.json();
 
     const {
       customerName,
@@ -15,55 +38,47 @@ export async function POST(req: Request) {
       deliveryFee = 0,
       paymentMethod,
       notes,
-      items, 
-    } = body
-
+      items,
+    } = body;
 
     if (!customerName || !phone || !address || !city || !paymentMethod || !items?.length) {
       return NextResponse.json(
         { error: "بيانات الطلب غير مكتملة" },
         { status: 400 }
-      )
+      );
     }
 
-    // حساب السعر النهائي لكل عنصر باستخدام calculateProductPrice
-    let totalAmount = 0
-    const orderItemsData = []
+    // حساب السعر النهائي لكل عنصر
+    let totalAmount = 0;
+    const orderItemsData: PreparedOrderItem[] = [];
 
-    for (const item of items) {
-      // تأكد من أن selectedOptions موجودة، وإلا اجعلها مصفوفة فارغة
-      const selectedOptions = item.selectedOptions || []
-
-      // احسب السعر من الخلفية (مهم جداً للأمان)
+    for (const item of items as OrderItem[]) {
+      const selectedOptions = item.selectedOptions || [];
       const pricing = await calculateProductPrice(
         item.productId,
-        selectedOptions // يجب أن يكون formato: [{ optionId: number }]
-      )
+        selectedOptions
+      );
 
-      const itemTotal = pricing.finalPrice * item.quantity
-      totalAmount += itemTotal
+      const itemTotal = pricing.finalPrice * item.quantity;
+      totalAmount += itemTotal;
 
-      // تجهيز البيانات لحفظها في order_items
       orderItemsData.push({
         product_name: pricing.productName,
         category: item.category || "",
         quantity: item.quantity,
-        unit_price: pricing.finalPrice, // السعر النهائي للوحدة
-        selected_options: JSON.stringify(pricing.selectedOptions), // snapshot كـ JSON
+        unit_price: pricing.finalPrice,
+        selected_options: JSON.stringify(pricing.selectedOptions),
         product_price_snapshot: pricing.basePrice,
         final_price_snapshot: pricing.finalPrice,
         notes: item.notes || null,
-      })
+      });
     }
 
-    // إضافة رسوم التوصيل
-    totalAmount += deliveryFee
+    totalAmount += deliveryFee;
 
-    // بدء transaction
-    await sql`BEGIN`
-
-    try {
-      // 1. إنشاء الطلب في جدول orders
+    // استخدام sql.begin للمعاملة - بدون تمرير sql كمعامل
+    const result = await sql.begin(async () => {
+      // 1. إنشاء الطلب
       const [order] = await sql`
         INSERT INTO orders (
           customer_name,
@@ -91,9 +106,9 @@ export async function POST(req: Request) {
           NOW()
         )
         RETURNING id
-      ` as { id: number }[]
+      `;
 
-      // 2. إضافة عناصر الطلب إلى order_items
+      // 2. إضافة عناصر الطلب
       for (const itemData of orderItemsData) {
         await sql`
           INSERT INTO order_items (
@@ -117,58 +132,59 @@ export async function POST(req: Request) {
             ${itemData.final_price_snapshot},
             ${itemData.notes}
           )
-        `
+        `;
       }
 
-      await sql`COMMIT`
+      return order;
+    });
 
-      return NextResponse.json({
-        success: true,
-        orderId: order.id,
-        totalAmount,
-      })
-    } catch (error) {
-      await sql`ROLLBACK`
-      throw error
-    }
+    return NextResponse.json({
+      success: true,
+      orderId: result.id,
+      totalAmount,
+    });
+
   } catch (error: any) {
-    console.error("Order creation error:", error)
+    console.error("Order creation error:", error);
     return NextResponse.json(
-      { error: error.message || "حدث خطأ في إنشاء الطلب" },
+      { error: error?.message || "حدث خطأ في إنشاء الطلب" },
       { status: 500 }
-    )
+    );
   }
 }
 
-// يمكنك الاحتفاظ بـ GET إذا كنت تريد جلب الطلبات (اختياري)
 export async function GET() {
   try {
     const orders = await sql`
       SELECT o.*, 
-        json_agg(
-          json_build_object(
-            'id', oi.id,
-            'product_name', oi.product_name,
-            'category', oi.category,
-            'quantity', oi.quantity,
-            'unit_price', oi.unit_price,
-            'selected_options', oi.selected_options,
-            'product_price_snapshot', oi.product_price_snapshot,
-            'final_price_snapshot', oi.final_price_snapshot,
-            'notes', oi.notes
-          ) ORDER BY oi.id
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', oi.id,
+              'product_name', oi.product_name,
+              'category', oi.category,
+              'quantity', oi.quantity,
+              'unit_price', oi.unit_price,
+              'selected_options', (oi.selected_options::jsonb)::jsonb,  
+              'product_price_snapshot', oi.product_price_snapshot,
+              'final_price_snapshot', oi.final_price_snapshot,
+              'notes', oi.notes
+            ) ORDER BY oi.id
+          ) FILTER (WHERE oi.id IS NOT NULL),
+          '[]'::json
         ) as items
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
       GROUP BY o.id
       ORDER BY o.created_at DESC
-    `
-    return NextResponse.json(orders)
-  } catch (error) {
-    console.error("Orders fetch error:", error)
+    `;
+    
+    return NextResponse.json(orders);
+  } catch (error: any) {
+    console.error("Orders fetch error:", error);
     return NextResponse.json(
       { error: "خطأ في جلب الطلبات" },
       { status: 500 }
-    )
+    );
   }
 }

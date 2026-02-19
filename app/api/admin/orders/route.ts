@@ -20,7 +20,7 @@ export async function GET() {
             'category', oi.category,
             'quantity', oi.quantity,
             'unit_price', oi.unit_price,
-            'selected_options', oi.selected_options,  -- <-- أضف هذا السطر
+            'selected_options', (oi.selected_options::jsonb)::jsonb,
             'addons', oi.addons,
             'notes', oi.notes
           ) ORDER BY oi.id
@@ -33,7 +33,7 @@ export async function GET() {
     return NextResponse.json(orders)
   } catch (error) {
     console.error("Admin orders error:", error)
-    return NextResponse.json({ error: "خطأ" }, { status: 500 })
+    return NextResponse.json({ error: "خطأ في جلب الطلبات" }, { status: 500 })
   }
 }
 
@@ -45,10 +45,20 @@ export async function PATCH(request: Request) {
 
   try {
     const { orderId, status } = await request.json()
-    await sql`UPDATE orders SET status = ${status} WHERE id = ${orderId}`
+    
+    if (!orderId || !status) {
+      return NextResponse.json({ error: "بيانات غير كاملة" }, { status: 400 })
+    }
+
+    await sql`
+      UPDATE orders 
+      SET status = ${status} 
+      WHERE id = ${orderId}
+    `
+    
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Update order error:", error)
-    return NextResponse.json({ error: "خطأ" }, { status: 500 })
+    return NextResponse.json({ error: "خطأ في تحديث الطلب" }, { status: 500 })
   }
 }
