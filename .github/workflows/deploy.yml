@@ -21,13 +21,12 @@ jobs:
     - name: ⚙️ Use Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '24.13.0'
+        node-version: '224.13.00'  
         cache: 'pnpm'
 
-    - name: 🔨 Build Project
-      run: |
-        pnpm install --no-frozen-lockfile
-        pnpm run build
+    - name: 📦 Install Dependencies
+      run: pnpm install --no-frozen-lockfile
+
 
     - name: 📂 Sync Files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -41,7 +40,10 @@ jobs:
         exclude: |
           **/.git*
           **/node_modules/**
+          **/.env*
+          **/.next**        
           public/uploads/**
           src/
           .github/
           pnpm-lock.yaml
+          README.md
