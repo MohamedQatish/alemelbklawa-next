@@ -1,14 +1,8 @@
-// lib/db.ts - هذا الملف مخصص فقط للاتصال بقاعدة البيانات
 import postgres from 'postgres';
 
 const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString) {
-  throw new Error('DATABASE_URL is not set in environment variables');
-}
-
-// تصدير sql للاستخدام في جميع أنحاء التطبيق
-export const sql = postgres(connectionString, {
+export const sql = postgres(connectionString || 'postgres://empty:empty@localhost:5432/empty', {
   ssl: false,
   max: 5,
   idle_timeout: 15,
@@ -16,5 +10,4 @@ export const sql = postgres(connectionString, {
   prepare: false
 });
 
-// تصدير افتراضي أيضاً
 export default sql;
