@@ -1,4 +1,4 @@
-import { sql } from "./neon"
+import { sql } from "./db"
 import { cookies } from "next/headers"
 
 function toHex(buffer: Uint8Array): string {

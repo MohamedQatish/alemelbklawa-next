@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/neon"
+import { sql } from "@/lib/db"
 import { cookies } from "next/headers"
 import { ensureTables } from "@/lib/ensure-tables"
 

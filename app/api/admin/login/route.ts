@@ -1,5 +1,5 @@
 import { createAdminSession, verifyPassword } from "@/lib/auth"
-import { sql } from "@/lib/neon"
+import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { ensureTables } from "@/lib/ensure-tables"
 

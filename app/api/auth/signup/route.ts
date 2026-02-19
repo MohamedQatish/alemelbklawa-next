@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/neon"
+import { sql } from "@/lib/db"
 import { hashPassword, createUserSession } from "@/lib/user-auth"
 import { ensureTables } from "@/lib/ensure-tables"
 

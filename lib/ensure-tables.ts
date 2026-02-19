@@ -1,4 +1,4 @@
-import { sql } from "./neon"
+import { sql } from "./db"
 
 let _migrationDone = false
 let _migrationPromise: Promise<void> | null = null

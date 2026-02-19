@@ -1,5 +1,5 @@
 import { cookies } from "next/headers"
-import { sql } from "./neon"
+import { sql } from "./db"
 
 /* ---------- Types ---------- */
 export type AdminRole = "super_admin" | "admin" | "editor" | "viewer"

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/neon"
+import { sql } from "@/lib/db"
 import { calculateProductPrice } from "@/lib/pricing"
 
 export async function POST(req: Request) {
