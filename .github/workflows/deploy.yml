@@ -7,7 +7,7 @@ on:
 
 jobs:
   web-deploy:
-    name: 🎉 Deploy
+    name: 🎉 Build and Deploy
     runs-on: ubuntu-latest
     steps:
     - name: 🚚 Get latest code
@@ -27,6 +27,11 @@ jobs:
     - name: 📦 Install Dependencies
       run: pnpm install --no-frozen-lockfile
 
+    - name: 🏗️ Build Project
+      run: pnpm build 
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }} 
+        NEXT_PUBLIC_APP_URL: https://alemelbklawa.ly
 
     - name: 📂 Sync Files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -41,7 +46,6 @@ jobs:
           **/.git*
           **/node_modules/**
           **/.env*
-          **/.next**        
           public/uploads/**
           src/
           .github/
