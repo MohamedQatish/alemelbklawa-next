@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer)
 
     // 6. الرابط العام الذي سيتم تخزينه في قاعدة البيانات واستخدامه في <img>
-    const imageUrl = `/uploads/products/${fileName}`
+    const imageUrl = `uploads/products/${fileName}`
 
     return NextResponse.json({ 
       url: imageUrl,
