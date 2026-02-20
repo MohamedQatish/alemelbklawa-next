@@ -70,7 +70,8 @@ const ICON_KEY_MAP: Record<string, string> = {
 };
 
 /* ============================================================
-   3D SVG Icons
+   3D SVG Icons — one per menu category
+   Each uses gold gradients with highlights for a 3D metallic look
    ============================================================ */
 
 function JuiceIcon({ size = 48 }: { size?: number }) {
@@ -97,16 +98,20 @@ function JuiceIcon({ size = 48 }: { size?: number }) {
           <stop offset="100%" stopColor="white" stopOpacity="0" />
         </linearGradient>
       </defs>
+      {/* Glass body */}
       <path
         d="M22 18 L20 54 C20 56.2 21.8 58 24 58 L40 58 C42.2 58 44 56.2 44 54 L42 18 Z"
         fill="url(#juice-body)"
       />
+      {/* Liquid inside */}
       <path
         d="M23 30 L21 54 C21 55.7 22.3 57 24 57 L40 57 C41.7 57 43 55.7 43 54 L41 30 Z"
         fill="url(#juice-liquid)"
         opacity="0.85"
       />
+      {/* Glass highlight */}
       <path d="M24 19 L23 52 L26 52 L27 19 Z" fill="url(#juice-highlight)" />
+      {/* Rim */}
       <ellipse
         cx="32"
         cy="18"
@@ -116,6 +121,7 @@ function JuiceIcon({ size = 48 }: { size?: number }) {
         stroke="#C5A55A"
         strokeWidth="1"
       />
+      {/* Straw */}
       <rect
         x="34"
         y="6"
@@ -125,12 +131,14 @@ function JuiceIcon({ size = 48 }: { size?: number }) {
         fill="#C5A55A"
         transform="rotate(8 35 22)"
       />
+      {/* Straw bend */}
       <path
         d="M37 8 L40 4"
         stroke="#C5A55A"
         strokeWidth="3"
         strokeLinecap="round"
       />
+      {/* Ice cubes */}
       <rect
         x="26"
         y="34"
@@ -178,8 +186,10 @@ function LibyanSweetsIcon({ size = 48 }: { size?: number }) {
           <stop offset="100%" stopColor="#C5A55A" />
         </linearGradient>
       </defs>
+      {/* Ornate tray */}
       <ellipse cx="32" cy="52" rx="26" ry="6" fill="url(#lb-tray)" />
       <ellipse cx="32" cy="52" rx="22" ry="4" fill="#D4B96E" opacity="0.3" />
+      {/* Baklava diamond pieces */}
       <path d="M16 38 L24 28 L32 38 L24 44 Z" fill="url(#lb-pastry)" />
       <path d="M28 36 L36 26 L44 36 L36 42 Z" fill="url(#lb-pastry)" />
       <path
@@ -187,6 +197,7 @@ function LibyanSweetsIcon({ size = 48 }: { size?: number }) {
         fill="url(#lb-pastry)"
         opacity="0.9"
       />
+      {/* Honey drizzle */}
       <path
         d="M22 32 Q24 30 26 32 Q28 34 30 32 Q32 30 34 32 Q36 34 38 32"
         stroke="url(#lb-honey)"
@@ -201,10 +212,12 @@ function LibyanSweetsIcon({ size = 48 }: { size?: number }) {
         fill="none"
         opacity="0.6"
       />
+      {/* Pistachio sprinkles */}
       <circle cx="24" cy="33" r="1.2" fill="#7BA05B" />
       <circle cx="34" cy="31" r="1" fill="#7BA05B" />
       <circle cx="30" cy="39" r="1.1" fill="#7BA05B" />
       <circle cx="38" cy="35" r="0.9" fill="#8CB06B" />
+      {/* Highlight */}
       <path d="M18 36 L22 30 L24 32 L20 38 Z" fill="white" opacity="0.15" />
     </svg>
   );
@@ -235,9 +248,12 @@ function OrientalSweetsIcon({ size = 48 }: { size?: number }) {
           <stop offset="100%" stopColor="#E8D5A0" />
         </radialGradient>
       </defs>
+      {/* Plate */}
       <ellipse cx="32" cy="50" rx="27" ry="7" fill="url(#os-plate)" />
       <ellipse cx="32" cy="50" rx="23" ry="5" fill="#D4B96E" opacity="0.25" />
+      {/* Round kunafa base */}
       <ellipse cx="32" cy="36" rx="18" ry="10" fill="url(#os-kunafa)" />
+      {/* Shredded texture lines */}
       <path
         d="M16 34 Q20 30 24 34 Q28 38 32 34 Q36 30 40 34 Q44 38 48 34"
         stroke="#C57818"
@@ -252,11 +268,13 @@ function OrientalSweetsIcon({ size = 48 }: { size?: number }) {
         fill="none"
         opacity="0.4"
       />
+      {/* Cheese filling visible at slice */}
       <path
         d="M44 34 L50 38 L48 42 L42 38 Z"
         fill="url(#os-cheese)"
         opacity="0.8"
       />
+      {/* Syrup drizzle */}
       <path
         d="M20 32 Q24 28 28 32 Q32 36 36 32 Q40 28 44 32"
         stroke="#FFDB70"
@@ -264,11 +282,13 @@ function OrientalSweetsIcon({ size = 48 }: { size?: number }) {
         fill="none"
         opacity="0.7"
       />
+      {/* Pistachio topping */}
       <circle cx="28" cy="33" r="1.5" fill="#7BA05B" />
       <circle cx="32" cy="31" r="1.3" fill="#8CB06B" />
       <circle cx="36" cy="33" r="1.4" fill="#7BA05B" />
       <circle cx="30" cy="36" r="1.1" fill="#6B904B" />
       <circle cx="34" cy="35" r="1.2" fill="#8CB06B" />
+      {/* Top highlight */}
       <ellipse cx="28" cy="32" rx="6" ry="3" fill="white" opacity="0.1" />
     </svg>
   );
@@ -305,7 +325,9 @@ function CakeIcon({ size = 48 }: { size?: number }) {
           <stop offset="100%" stopColor="#A8883A" />
         </linearGradient>
       </defs>
+      {/* Bottom tier */}
       <rect x="10" y="40" width="44" height="16" rx="4" fill="url(#ck-base)" />
+      {/* Cream layer */}
       <rect
         x="12"
         y="36"
@@ -314,13 +336,17 @@ function CakeIcon({ size = 48 }: { size?: number }) {
         rx="2.5"
         fill="url(#ck-cream)"
       />
+      {/* Top tier */}
       <rect x="14" y="22" width="36" height="15" rx="4" fill="url(#ck-top)" />
+      {/* Icing drip */}
       <path
         d="M14 24 Q14 22 16 22 L48 22 Q50 22 50 24 L50 26 Q46 30 42 26 Q38 22 34 26 Q30 30 26 26 Q22 22 18 26 L14 26 Z"
         fill="url(#ck-icing)"
       />
+      {/* Cherry on top */}
       <circle cx="32" cy="16" r="4" fill="#D44040" />
       <circle cx="30" cy="14" r="1.2" fill="white" opacity="0.4" />
+      {/* Stem */}
       <path
         d="M32 12 Q34 8 37 7"
         stroke="#5A8A3A"
@@ -328,6 +354,7 @@ function CakeIcon({ size = 48 }: { size?: number }) {
         strokeLinecap="round"
         fill="none"
       />
+      {/* Side highlights */}
       <rect
         x="14"
         y="24"
@@ -380,8 +407,11 @@ function TorteIcon({ size = 48 }: { size?: number }) {
           <stop offset="100%" stopColor="#E8D5A0" />
         </linearGradient>
       </defs>
+      {/* Base plate */}
       <ellipse cx="32" cy="54" rx="26" ry="5" fill="#C5A55A" opacity="0.3" />
+      {/* Bottom tier */}
       <rect x="8" y="38" width="48" height="16" rx="4" fill="url(#tr-base)" />
+      {/* Cream line */}
       <rect
         x="10"
         y="36"
@@ -390,11 +420,14 @@ function TorteIcon({ size = 48 }: { size?: number }) {
         rx="1.5"
         fill="url(#tr-cream-fill)"
       />
+      {/* Top tier */}
       <rect x="12" y="24" width="40" height="13" rx="4" fill="url(#tr-choco)" />
+      {/* Gold glaze drip */}
       <path
         d="M12 26 Q12 24 14 24 L50 24 Q52 24 52 26 L52 28 Q48 33 44 28 Q40 23 36 28 Q32 33 28 28 Q24 23 20 28 L12 28 Z"
         fill="url(#tr-glaze)"
       />
+      {/* Chocolate shavings on top */}
       <rect
         x="20"
         y="20"
@@ -422,6 +455,7 @@ function TorteIcon({ size = 48 }: { size?: number }) {
         fill="#3E1E10"
         transform="rotate(-8 41 22)"
       />
+      {/* Gold decorative swirl */}
       <path
         d="M28 16 Q30 12 32 14 Q34 16 36 12 Q38 8 40 12"
         stroke="#C5A55A"
@@ -429,6 +463,7 @@ function TorteIcon({ size = 48 }: { size?: number }) {
         fill="none"
         strokeLinecap="round"
       />
+      {/* Side highlight */}
       <rect
         x="14"
         y="26"
@@ -468,33 +503,83 @@ export default function MenuSection() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
 
-  // أنيميشن بسيط
+  // إضافة الأنيميشن مع إخفاء شريط التمرير
   useEffect(() => {
-    const styleElement = document.createElement("style");
+    const styleElement = document.createElement('style');
     styleElement.textContent = `
-      @keyframes gentleFloat {
+      @keyframes softPulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.08); opacity: 0.9; }
+      }
+      
+      @keyframes gentleBounce {
         0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-3px); }
+        50% { transform: translateY(-5px); }
       }
       
-      .icon-subtle-float {
-        animation: gentleFloat 3s ease-in-out infinite;
+      @keyframes slowSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
       }
       
-      .hover-lift {
-        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      @keyframes goldGlow {
+        0%, 100% { filter: drop-shadow(0 0 3px rgba(212, 175, 55, 0.4)); }
+        50% { filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.8)); }
       }
       
-      .hover-lift:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.15);
+      @keyframes wiggle {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(8deg); }
+        75% { transform: rotate(-8deg); }
+      }
+      
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+      }
+      
+      @keyframes shimmer {
+        0% { filter: brightness(1); }
+        50% { filter: brightness(1.3); }
+        100% { filter: brightness(1); }
+      }
+      
+      @keyframes heartbeat {
+        0%, 100% { transform: scale(1); }
+        25% { transform: scale(1.1); }
+        50% { transform: scale(0.95); }
+        75% { transform: scale(1.05); }
+      }
+      
+      .animate-icon-pulse { animation: softPulse 2.5s ease-in-out infinite; }
+      .animate-icon-bounce { animation: gentleBounce 2s ease infinite; }
+      .animate-icon-spin { animation: slowSpin 8s linear infinite; }
+      .animate-icon-glow { animation: goldGlow 2.5s ease-in-out infinite; }
+      .animate-icon-wiggle { animation: wiggle 1.5s ease-in-out infinite; }
+      .animate-icon-float { animation: float 3s ease-in-out infinite; }
+      .animate-icon-shimmer { animation: shimmer 2s ease-in-out infinite; }
+      .animate-icon-heartbeat { animation: heartbeat 2s ease-in-out infinite; }
+      
+      .icon-hover-effect {
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      .icon-hover-effect:hover {
+        transform: scale(1.2) rotate(5deg);
+        filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.9));
+      }
+      
+      .icon-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
       }
       
       .icon-active {
-        filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.5));
+        filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.8));
       }
-      
-      /* إخفاء شريط التمرير */
+
+      /* إخفاء شريط التمرير مع بقاء وظيفة التمرير */
       .scrollbar-hide::-webkit-scrollbar {
         display: none;
       }
@@ -502,17 +587,9 @@ export default function MenuSection() {
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
-      
-      /* للنصوص المقصوصة */
-      .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
     `;
     document.head.appendChild(styleElement);
-
+    
     return () => {
       document.head.removeChild(styleElement);
     };
@@ -528,6 +605,7 @@ export default function MenuSection() {
       if (catRes.ok) {
         const cats: DBCategory[] = await catRes.json();
         setDbCategories(cats);
+        // Set first category as active if none set
         if (cats.length > 0) {
           setActiveCategory(
             (prev) => prev || ICON_KEY_MAP[cats[0].name] || cats[0].name,
@@ -573,6 +651,7 @@ export default function MenuSection() {
   const categories: MenuCategory[] = (() => {
     if (!dbProducts) return [];
 
+    // If we have DB categories, use those as the source of truth
     if (dbCategories.length > 0) {
       return dbCategories
         .map((cat) => {
@@ -597,6 +676,7 @@ export default function MenuSection() {
         .filter((c) => c.items.length > 0);
     }
 
+    // Fallback: build categories from product data
     const catNames = [...new Set(dbProducts.map((p) => p.category))];
     return catNames
       .map((catName) => {
@@ -623,17 +703,20 @@ export default function MenuSection() {
 
   const currentCategory = categories.find((c) => c.id === activeCategory);
 
-  // ===== Product Modal State =====
+  // ===== NEW: Product Modal State =====
   const [selectedProduct, setSelectedProduct] = useState<DBProduct | null>(
     null,
   );
+  // selections: key = groupId, value = array of selected optionIds
   const [selections, setSelections] = useState<Record<number, number[]>>({});
   const [calculating, setCalculating] = useState(false);
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
   const [calculatedOptions, setCalculatedOptions] = useState<any[]>([]);
 
+  // Reset selections when product changes
   useEffect(() => {
     if (selectedProduct) {
+      // Initialize selections: for required single groups, auto-select first option
       const initial: Record<number, number[]> = {};
       selectedProduct.option_groups.forEach((group) => {
         if (group.isRequired && group.options.length > 0) {
@@ -648,14 +731,17 @@ export default function MenuSection() {
     }
   }, [selectedProduct]);
 
+  // Call calculate API whenever selections change
   useEffect(() => {
     if (!selectedProduct) return;
 
+    // Build array of selected optionIds from all groups
     const selectedOptionIds: { optionId: number }[] = [];
     Object.entries(selections).forEach(([groupId, optionIds]) => {
       optionIds.forEach((oid) => selectedOptionIds.push({ optionId: oid }));
     });
 
+    // If no options selected, don't calculate (show base price)
     if (selectedOptionIds.length === 0) {
       setCalculatedPrice(Number(selectedProduct.base_price));
       setCalculatedOptions([]);
@@ -691,6 +777,7 @@ export default function MenuSection() {
     calculate();
   }, [selectedProduct, selections]);
 
+  // Handle option toggle for single/multiple groups
   const toggleOption = (groupId: number, optionId: number) => {
     setSelections((prev) => {
       const group = selectedProduct?.option_groups.find(
@@ -701,14 +788,17 @@ export default function MenuSection() {
       const current = prev[groupId] || [];
 
       if (group.selectionType === "single") {
+        // Single: replace selection
         return { ...prev, [groupId]: [optionId] };
       } else {
+        // Multiple: toggle
         if (current.includes(optionId)) {
           return {
             ...prev,
             [groupId]: current.filter((id) => id !== optionId),
           };
         } else {
+          // Check maxSelect
           if (group.maxSelect && current.length >= group.maxSelect) {
             toast.error(`يمكنك اختيار ${group.maxSelect} خيارات كحد أقصى`);
             return prev;
@@ -719,9 +809,11 @@ export default function MenuSection() {
     });
   };
 
+  // Confirm add to cart
   const confirmAddToCart = () => {
     if (!selectedProduct || calculatedPrice === null) return;
 
+    // التحقق من اكتمال المجموعات الإجبارية
     for (const group of selectedProduct.option_groups) {
       if (
         group.isRequired &&
@@ -732,6 +824,7 @@ export default function MenuSection() {
       }
     }
 
+    // تجهيز selectedOptions للعرض في السلة
     const selectedOptionsForCart = calculatedOptions.map((opt) => ({
       id: opt.id,
       name: opt.name,
@@ -751,163 +844,183 @@ export default function MenuSection() {
     setSelectedProduct(null);
   };
 
+const getIconAnimation = (catId: string, isActive: boolean) => {
+  if (isActive) return 'animate-icon-pulse';
+  return '';
+};
+
   return (
     <section
       ref={sectionRef}
       id="menu"
-      className="bg-royal-red-dark relative py-8 sm:py-12 md:py-20"
+      className="bg-royal-red-dark relative py-20 overflow-hidden"
     >
-      <div className="mx-auto max-w-7xl px-3 sm:px-4 md:px-6">
+      {/* خلفية متحركة خفيفة */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-0 left-0 w-64 h-64 bg-[var(--gold)] rounded-full filter blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[var(--gold)] rounded-full filter blur-3xl animate-pulse delay-1000"></div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-6 relative z-10">
         {/* Section Title */}
         <div
-          className="mb-6 sm:mb-10 md:mb-16 text-center transition-all duration-700"
+          className="mb-16 text-center transition-all duration-700"
           style={{
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(24px)",
           }}
         >
-          <h2 className="mb-2 sm:mb-3 md:mb-4 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--gold)]">
+          <h2 className="animate-shimmer mb-4 text-4xl font-bold md:text-5xl text-[var(--gold)]">
             القائمة
           </h2>
-          <div className="mx-auto h-0.5 sm:h-1 w-12 sm:w-16 md:w-24 rounded-full bg-[var(--gold)]/50" />
+          <div className="mx-auto h-1 w-24 rounded-full bg-[var(--gold)]/50" />
         </div>
 
-        {/* Category Tabs - في صف واحد مع تمرير أفقي */}
+        {/* Category Tabs - نسختك الجديدة مع التمرير الأفقي للموبايل فقط */}
         <div
-          className="mb-6 sm:mb-8 md:mb-12 lg:mb-14 overflow-x-auto scrollbar-hide"
+          className="mb-8 sm:mb-14 flex gap-3 overflow-x-auto px-2 sm:flex-wrap sm:justify-center scrollbar-hide"
           style={{
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(20px)",
             transition: "opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s",
           }}
         >
-          <div className="flex flex-nowrap items-center justify-start gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 px-1">
-            {categories.map((cat, index) => {
-              const isActive = activeCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`group flex flex-col items-center gap-1 sm:gap-1.5 md:gap-2 rounded-lg sm:rounded-xl md:rounded-2xl px-2 sm:px-3 md:px-4 lg:px-5 py-1.5 sm:py-2 md:py-3 lg:py-4 transition-all duration-300 hover-lift flex-shrink-0 ${
-                    isActive
-                      ? "border border-[var(--gold)]/50 bg-[var(--gold)]/12"
-                      : "border border-[var(--gold)]/15 bg-[var(--royal-red-light)]/40 hover:border-[var(--gold)]/30"
-                  }`}
-                  style={{ minWidth: "60px", maxWidth: "85px" }}
-                >
-                  {/* Icon Container - مصغر للموبايل */}
-                  <div className="menu-icon-3d">
-                    <div
-                      className={`menu-icon-3d-inner flex h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 items-center justify-center rounded-md sm:rounded-lg md:rounded-xl transition-all duration-300 ${
-                        isActive ? "icon-active" : ""
-                      }`}
-                      style={{
-                        background: isActive
-                          ? "linear-gradient(135deg, hsl(43 65% 52% / 0.2), hsl(43 65% 52% / 0.08))"
-                          : "linear-gradient(135deg, hsl(350 60% 18% / 0.6), hsl(350 76% 14% / 0.4))",
-                      }}
-                    >
-                      {cat.icon ? (
-                        <span className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl icon-subtle-float">
-                          {cat.icon}
-                        </span>
-                      ) : (
-                        <div className="icon-subtle-float scale-50 sm:scale-75 md:scale-90 lg:scale-100">
-                          {categoryIcons[cat.id]}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Label - مصغر للموبايل */}
-                  <span
-                    className={`text-[10px] sm:text-xs md:text-sm font-semibold transition-colors duration-200 ${
-                      isActive
-                        ? "text-[var(--gold)]"
-                        : "text-[var(--gold)]/60 group-hover:text-[var(--gold)]/80"
-                    }`}
-                  >
-                    {cat.label.length > 8
-                      ? cat.label.substring(0, 7) + "…"
-                      : cat.label}
-                  </span>
-
-                  {/* Active indicator - أصغر للموبايل */}
+          {categories.map((cat, index) => {
+            const isActive = activeCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                className={`flex-shrink-0 group flex flex-col items-center gap-2 rounded-2xl px-4 py-3 transition-all duration-300 sm:px-5 sm:py-4 ${
+                  isActive
+                    ? "border-2 border-[var(--gold)]/60 bg-[var(--gold)]/15 shadow-lg scale-105"
+                    : "border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/40 hover:border-[var(--gold)]/40 hover:bg-[var(--gold)]/8 hover:scale-102"
+                }`}
+                style={{ minWidth: "90px" }}
+              >
+                {/* 3D Icon Container - مع تصغير للموبايل */}
+                <div className="menu-icon-3d">
                   <div
-                    className="h-0.5 sm:h-1 rounded-full transition-all duration-300"
+                    className={`menu-icon-3d-inner flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl transition-all duration-500 icon-container ${
+                      isActive ? 'icon-active' : ''
+                    }`}
                     style={{
-                      width: isActive ? "12px" : "0px",
-                      background: isActive ? "var(--gold)" : "transparent",
+                      background: isActive
+                        ? "linear-gradient(135deg, hsl(43 65% 52% / 0.25), hsl(43 65% 52% / 0.12))"
+                        : "linear-gradient(135deg, hsl(350 60% 18% / 0.7), hsl(350 76% 14% / 0.5))",
+                      boxShadow: isActive
+                        ? "0 8px 25px hsl(43 65% 52% / 0.25), inset 0 2px 5px hsl(43 65% 52% / 0.2)"
+                        : "0 4px 12px hsl(0 0% 0% / 0.3), inset 0 1px 2px hsl(0 0% 100% / 0.1)",
                     }}
-                  />
-                </button>
-              );
-            })}
-          </div>
+                  >
+                    {cat.icon ? (
+                      <span 
+                        className={`text-2xl sm:text-3xl icon-hover-effect ${getIconAnimation(cat.id, isActive)}`}
+                        style={{ 
+                          display: 'inline-block',
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'scale(1.2) rotate(5deg)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                        }}
+                      >
+                        {cat.icon}
+                      </span>
+                    ) : (
+                      <div className={`icon-hover-effect scale-90 sm:scale-100 ${getIconAnimation(cat.id, isActive)}`}>
+                        {categoryIcons[cat.id]}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Label - مع تصغير للموبايل */}
+                <span
+                  className={`text-xs sm:text-sm font-semibold transition-all duration-300 ${
+                    isActive
+                      ? "text-[var(--gold)] scale-105"
+                      : "text-[var(--gold)]/60 group-hover:text-[var(--gold)]/80"
+                  }`}
+                >
+                  {cat.label.length > 8 ? cat.label.substring(0, 7) + '…' : cat.label}
+                </span>
+
+                {/* Active indicator dot */}
+                <div
+                  className="h-1 rounded-full transition-all duration-400"
+                  style={{
+                    width: isActive ? "24px" : "0px",
+                    background: isActive ? "var(--gold)" : "transparent",
+                    opacity: isActive ? 1 : 0,
+                    boxShadow: isActive ? "0 0 10px var(--gold)" : "none",
+                  }}
+                />
+              </button>
+            );
+          })}
         </div>
 
-        {/* Products Grid - عمودين جنب بعض في الموبايل */}
+        {/* Products Grid */}
         {loadingProducts ? (
-          <div className="flex items-center justify-center py-12 sm:py-16">
-            <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-[var(--gold)]/50" />
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-[var(--gold)]/50" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:gap-6">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {currentCategory?.items.map((item, index) => {
-              const imgUrl = item.image_url;
+              const imgUrl =
+                "image_url" in item
+                  ? (item as { image_url?: string }).image_url
+                  : undefined;
               return (
                 <div
                   key={item.id}
-                  className="group overflow-hidden rounded-lg sm:rounded-xl md:rounded-2xl border border-[var(--gold)]/15 bg-[var(--royal-red-light)]/60 backdrop-blur-sm transition-all duration-300 hover-lift"
+                  className="group overflow-hidden rounded-2xl border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/60 backdrop-blur-sm transition-all duration-500 hover:border-[var(--gold)]/50 hover:shadow-2xl hover:shadow-[var(--gold)]/20 hover:-translate-y-1"
                   style={{
                     opacity: visible ? 1 : 0,
                     transform: visible ? "translateY(0)" : "translateY(20px)",
-                    transition: `opacity 0.5s ease ${index * 0.04 + 0.3}s, transform 0.5s ease ${index * 0.04 + 0.3}s`,
+                    transition: `opacity 0.5s ease ${index * 0.04 + 0.3}s, transform 0.5s ease ${index * 0.04 + 0.3}s, box-shadow 0.3s ease, border-color 0.3s ease`,
                   }}
                 >
-                  {/* Product Image - مصغرة للموبايل */}
-                  {imgUrl ? (
-                    <div className="relative h-16 sm:h-20 md:h-24 lg:h-32 xl:h-36 w-full overflow-hidden">
+                  {/* Product Image */}
+                  {imgUrl && (
+                    <div className="relative h-44 w-full overflow-hidden">
                       <img
                         src={imgUrl}
                         alt={item.name}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                         crossOrigin="anonymous"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-transparent to-transparent" />
-
-                      {/* Featured Badge - أصغر للموبايل */}
+                      
+                      {/* Badge للمنتجات المميزة */}
                       {item.is_featured && (
-                        <div className="absolute top-1 right-1 bg-[var(--gold)] text-[var(--royal-red-dark)] text-[8px] sm:text-[10px] md:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded-full">
+                        <div className="absolute top-2 right-2 bg-[var(--gold)] text-[var(--royal-red-dark)] text-xs font-bold px-2 py-1 rounded-full animate-pulse">
                           مميز
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="relative h-16 sm:h-20 md:h-24 lg:h-32 xl:h-36 w-full bg-[var(--royal-red-light)] flex items-center justify-center">
-                      <span className="text-xl sm:text-2xl md:text-3xl">
-                        {currentCategory?.icon || "🍰"}
-                      </span>
-                    </div>
                   )}
-
-                  <div className="p-1.5 sm:p-2 md:p-3 lg:p-4">
-                    <div className="mb-0.5 sm:mb-1 md:mb-2 flex items-start justify-between gap-0.5">
-                      <h3 className="text-[10px] sm:text-xs md:text-sm font-bold text-[var(--cream)] line-clamp-2 flex-1">
+                  <div className="p-6">
+                    <div className="mb-4 flex items-start justify-between">
+                      <h3 className="text-lg font-bold text-[var(--cream)] group-hover:text-[var(--gold)] transition-colors">
                         {item.name}
                       </h3>
-                      <span className="text-[8px] sm:text-[10px] md:text-xs text-[var(--gold)] font-bold whitespace-nowrap">
-                        {Number(item.price).toFixed(1)} د.ل
+                      <span className="text-[var(--gold)] font-bold">
+                        {Number(item.price).toFixed(2)} د.ل
                       </span>
                     </div>
 
                     {item.description && (
-                      <p className="mb-1 sm:mb-1.5 md:mb-2 text-[8px] sm:text-[10px] md:text-xs text-[var(--gold)]/60 line-clamp-2">
+                      <p className="mb-4 text-sm text-[var(--gold)]/60">
                         {item.description}
                       </p>
                     )}
 
-                    {/* Add to Cart - أصغر للموبايل */}
+                    {/* Add to Cart */}
                     <button
                       onClick={() => {
                         const fullProduct = dbProducts?.find(
@@ -919,10 +1032,10 @@ export default function MenuSection() {
                           toast.error("لم يتم العثور على المنتج");
                         }
                       }}
-                      className="flex w-full items-center justify-center gap-0.5 sm:gap-1 rounded-md sm:rounded-lg border border-[var(--gold)]/30 bg-[var(--gold)]/10 py-1 sm:py-1.5 text-[8px] sm:text-[10px] md:text-xs font-semibold text-[var(--gold)] transition-all duration-200 hover:bg-[var(--gold)] hover:text-[var(--royal-red-dark)]"
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--gold)]/30 bg-[var(--gold)]/10 py-3 text-sm font-semibold text-[var(--gold)] transition-all duration-300 hover:bg-[var(--gold)] hover:text-[var(--royal-red-dark)] hover:scale-105 active:scale-95"
                     >
-                      <Plus className="h-2 w-2 sm:h-3 sm:w-3" />
-                      <span>أضف</span>
+                      <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" />
+                      أضف إلى السلة
                     </button>
                   </div>
                 </div>
@@ -932,29 +1045,31 @@ export default function MenuSection() {
         )}
       </div>
 
-      {/* Product Options Modal - بدون تغيير */}
+      {/* Product Options Modal */}
       {selectedProduct && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-300"
           onClick={() => setSelectedProduct(null)}
         >
           <div
-            className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-[var(--gold)]/20 bg-[var(--royal-red-dark)] shadow-2xl"
+            className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-[var(--gold)]/30 bg-[var(--royal-red-dark)] shadow-2xl animate-in zoom-in-95 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Close button */}
             <button
               onClick={() => setSelectedProduct(null)}
-              className="absolute left-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--royal-red-light)] text-[var(--gold)]/70 transition-colors hover:text-[var(--gold)]"
+              className="absolute left-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--royal-red-light)] text-[var(--gold)]/70 transition-all hover:text-[var(--gold)] hover:scale-110"
             >
               <X className="h-4 w-4" />
             </button>
 
+            {/* Product image */}
             {selectedProduct.image_url && (
               <div className="relative h-48 w-full overflow-hidden rounded-t-3xl">
                 <img
                   src={selectedProduct.image_url}
                   alt={selectedProduct.name}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover transition-transform duration-700 hover:scale-110"
                   crossOrigin="anonymous"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-transparent to-transparent" />
@@ -962,6 +1077,7 @@ export default function MenuSection() {
             )}
 
             <div className="p-6">
+              {/* Product info */}
               <div className="mb-4 flex items-start justify-between">
                 <h3 className="text-xl font-bold text-[var(--cream)]">
                   {selectedProduct.name}
@@ -977,6 +1093,7 @@ export default function MenuSection() {
                 </p>
               )}
 
+              {/* Option Groups */}
               {selectedProduct.option_groups.length > 0 ? (
                 <div className="mb-6 flex flex-col gap-5">
                   {selectedProduct.option_groups.map((group) => (
@@ -996,17 +1113,17 @@ export default function MenuSection() {
                               key={opt.id}
                               onClick={() => toggleOption(group.id, opt.id)}
                               className={`flex items-center justify-between rounded-xl border px-4 py-3 text-right transition-all duration-200 ${
-                                isSelected
-                                  ? "border-[var(--gold)] bg-[var(--gold)]/12"
-                                  : "border-white/10 bg-white/5 hover:bg-white/10"
+                                isSelected 
+                                  ? 'border-[var(--gold)] bg-[var(--gold)]/15 scale-102' 
+                                  : 'border-white/10 bg-white/5 hover:bg-white/10'
                               }`}
                             >
                               <div className="flex items-center gap-3">
                                 <div
                                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
                                     isSelected
-                                      ? "border-[var(--gold)] bg-[var(--gold)]"
-                                      : "border-white/20 bg-transparent"
+                                      ? 'border-[var(--gold)] bg-[var(--gold)]'
+                                      : 'border-white/20 bg-transparent'
                                   }`}
                                 >
                                   {isSelected && (
@@ -1015,9 +1132,7 @@ export default function MenuSection() {
                                 </div>
                                 <span
                                   className={`text-sm font-medium ${
-                                    isSelected
-                                      ? "text-[var(--gold)]"
-                                      : "text-[var(--cream)]"
+                                    isSelected ? 'text-[var(--gold)]' : 'text-[var(--cream)]'
                                   }`}
                                 >
                                   {opt.name}
@@ -1041,6 +1156,7 @@ export default function MenuSection() {
                 </p>
               )}
 
+              {/* Total Price & Add to Cart */}
               <div className="mb-4 flex justify-between items-center">
                 <span className="text-sm text-[var(--gold)]/70">
                   السعر النهائي:
@@ -1048,11 +1164,10 @@ export default function MenuSection() {
                 {calculating ? (
                   <Loader2 className="h-5 w-5 animate-spin text-[var(--gold)]/50" />
                 ) : (
-                  <span className="text-xl font-bold text-[var(--gold)]">
+                  <span className="text-xl font-bold text-[var(--gold)] animate-pulse">
                     {calculatedPrice !== null
                       ? calculatedPrice.toFixed(2)
-                      : Number(selectedProduct.base_price).toFixed(2)}{" "}
-                    د.ل
+                      : Number(selectedProduct.base_price).toFixed(2)} د.ل
                   </span>
                 )}
               </div>
@@ -1060,9 +1175,9 @@ export default function MenuSection() {
               <button
                 onClick={confirmAddToCart}
                 disabled={calculating}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-[var(--gold)]/30 bg-[var(--gold)] py-3.5 text-sm font-bold text-[var(--royal-red-dark)] transition-all duration-200 hover:bg-[var(--gold)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex w-full items-center justify-center gap-3 rounded-xl border border-[var(--gold)]/30 bg-[var(--gold)] py-3.5 text-sm font-bold text-[var(--royal-red-dark)] transition-all duration-300 hover:shadow-xl hover:shadow-[var(--gold)]/30 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" />
                 <span>أضف إلى السلة</span>
               </button>
             </div>
