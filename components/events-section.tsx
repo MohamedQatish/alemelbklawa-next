@@ -208,32 +208,33 @@ export default function EventsSection() {
     }))
   }
 
-  function addPackageToCart() {
-    let added = 0
-    for (const cat of eventCategories) {
-      const selectedId = selections[cat.id]
-      if (selectedId) {
-        const item = cat.items.find((i) => i.id === selectedId)
-        if (item) {
-          addToCart({
-            id: item.id,
-            name: `${item.name} (باقة مناسبات)`,
-            price: item.price,
-            category: "مناسبات",
-            addons: [],
-          })
-          added++
-        }
+ function addPackageToCart() {
+  let added = 0
+  for (const cat of eventCategories) {
+    const selectedId = selections[cat.id]
+    if (selectedId) {
+      const item = cat.items.find((i) => i.id === selectedId)
+      if (item) {
+        // ✅ التعديل الصحيح هنا
+        addToCart({
+          productId: parseInt(item.id),           // تحويل id إلى رقم
+          name: item.name,                         // اسم المنتج الأصلي
+          basePrice: item.price,                    // السعر الأساسي
+          finalPrice: item.price,                   // السعر النهائي (نفسه لعدم وجود خيارات)
+          category: "مناسبات",                       // التصنيف
+          selectedOptions: [],                       // مصفوفة فارغة (لا توجد خيارات)
+        })
+        added++
       }
     }
-    if (added > 0) {
-      toast.success(`تمت إضافة ${added} عناصر إلى السلة`)
-      setSelections({})
-    } else {
-      toast.error("يرجى اختيار عنصر واحد على الأقل")
-    }
   }
-
+  if (added > 0) {
+    toast.success(`تمت إضافة ${added} عناصر إلى السلة`)
+    setSelections({})  // إعادة تعيين الاختيارات
+  } else {
+    toast.error("يرجى اختيار عنصر واحد على الأقل")
+  }
+}
   const selectedCount = Object.values(selections).filter(Boolean).length
 
   return (
