@@ -505,7 +505,7 @@ export default function MenuSection() {
 
   // إضافة الأنيميشن مع إخفاء شريط التمرير
   useEffect(() => {
-    const styleElement = document.createElement('style');
+    const styleElement = document.createElement("style");
     styleElement.textContent = `
       @keyframes softPulse {
         0%, 100% { transform: scale(1); opacity: 1; }
@@ -589,7 +589,7 @@ export default function MenuSection() {
       }
     `;
     document.head.appendChild(styleElement);
-    
+
     return () => {
       document.head.removeChild(styleElement);
     };
@@ -844,10 +844,10 @@ export default function MenuSection() {
     setSelectedProduct(null);
   };
 
-const getIconAnimation = (catId: string, isActive: boolean) => {
-  if (isActive) return 'animate-icon-pulse';
-  return '';
-};
+  const getIconAnimation = (catId: string, isActive: boolean) => {
+    if (isActive) return "animate-icon-pulse";
+    return "";
+  };
 
   return (
     <section
@@ -878,8 +878,7 @@ const getIconAnimation = (catId: string, isActive: boolean) => {
 
         {/* Category Tabs - نسختك الجديدة مع التمرير الأفقي للموبايل فقط */}
         <div
-          className="mb-8 sm:mb-14 flex gap-3 overflow-x-auto px-2 sm:flex-wrap sm:justify-center scrollbar-hide"
-          style={{
+className="mb-8 sm:mb-14 flex gap-3 overflow-x-auto overflow-y-hidden px-2 sm:flex-wrap sm:justify-center scrollbar-hide"          style={{
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(20px)",
             transition: "opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s",
@@ -902,7 +901,7 @@ const getIconAnimation = (catId: string, isActive: boolean) => {
                 <div className="menu-icon-3d">
                   <div
                     className={`menu-icon-3d-inner flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl transition-all duration-500 icon-container ${
-                      isActive ? 'icon-active' : ''
+                      isActive ? "icon-active" : ""
                     }`}
                     style={{
                       background: isActive
@@ -914,23 +913,27 @@ const getIconAnimation = (catId: string, isActive: boolean) => {
                     }}
                   >
                     {cat.icon ? (
-                      <span 
+                      <span
                         className={`text-2xl sm:text-3xl icon-hover-effect ${getIconAnimation(cat.id, isActive)}`}
-                        style={{ 
-                          display: 'inline-block',
-                          transition: 'all 0.3s ease'
+                        style={{
+                          display: "inline-block",
+                          transition: "all 0.3s ease",
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'scale(1.2) rotate(5deg)';
+                          e.currentTarget.style.transform =
+                            "scale(1.2) rotate(5deg)";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                          e.currentTarget.style.transform =
+                            "scale(1) rotate(0deg)";
                         }}
                       >
                         {cat.icon}
                       </span>
                     ) : (
-                      <div className={`icon-hover-effect scale-90 sm:scale-100 ${getIconAnimation(cat.id, isActive)}`}>
+                      <div
+                        className={`icon-hover-effect scale-90 sm:scale-100 ${getIconAnimation(cat.id, isActive)}`}
+                      >
                         {categoryIcons[cat.id]}
                       </div>
                     )}
@@ -945,7 +948,7 @@ const getIconAnimation = (catId: string, isActive: boolean) => {
                       : "text-[var(--gold)]/60 group-hover:text-[var(--gold)]/80"
                   }`}
                 >
-                  {cat.label.length > 8 ? cat.label.substring(0, 7) + '…' : cat.label}
+                  {cat.label}
                 </span>
 
                 {/* Active indicator dot */}
@@ -995,7 +998,7 @@ const getIconAnimation = (catId: string, isActive: boolean) => {
                         crossOrigin="anonymous"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-transparent to-transparent" />
-                      
+
                       {/* Badge للمنتجات المميزة */}
                       {item.is_featured && (
                         <div className="absolute top-2 right-2 bg-[var(--gold)] text-[var(--royal-red-dark)] text-xs font-bold px-2 py-1 rounded-full animate-pulse">
@@ -1113,17 +1116,17 @@ const getIconAnimation = (catId: string, isActive: boolean) => {
                               key={opt.id}
                               onClick={() => toggleOption(group.id, opt.id)}
                               className={`flex items-center justify-between rounded-xl border px-4 py-3 text-right transition-all duration-200 ${
-                                isSelected 
-                                  ? 'border-[var(--gold)] bg-[var(--gold)]/15 scale-102' 
-                                  : 'border-white/10 bg-white/5 hover:bg-white/10'
+                                isSelected
+                                  ? "border-[var(--gold)] bg-[var(--gold)]/15 scale-102"
+                                  : "border-white/10 bg-white/5 hover:bg-white/10"
                               }`}
                             >
                               <div className="flex items-center gap-3">
                                 <div
                                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
                                     isSelected
-                                      ? 'border-[var(--gold)] bg-[var(--gold)]'
-                                      : 'border-white/20 bg-transparent'
+                                      ? "border-[var(--gold)] bg-[var(--gold)]"
+                                      : "border-white/20 bg-transparent"
                                   }`}
                                 >
                                   {isSelected && (
@@ -1132,7 +1135,9 @@ const getIconAnimation = (catId: string, isActive: boolean) => {
                                 </div>
                                 <span
                                   className={`text-sm font-medium ${
-                                    isSelected ? 'text-[var(--gold)]' : 'text-[var(--cream)]'
+                                    isSelected
+                                      ? "text-[var(--gold)]"
+                                      : "text-[var(--cream)]"
                                   }`}
                                 >
                                   {opt.name}
@@ -1167,7 +1172,8 @@ const getIconAnimation = (catId: string, isActive: boolean) => {
                   <span className="text-xl font-bold text-[var(--gold)] animate-pulse">
                     {calculatedPrice !== null
                       ? calculatedPrice.toFixed(2)
-                      : Number(selectedProduct.base_price).toFixed(2)} د.ل
+                      : Number(selectedProduct.base_price).toFixed(2)}{" "}
+                    د.ل
                   </span>
                 )}
               </div>

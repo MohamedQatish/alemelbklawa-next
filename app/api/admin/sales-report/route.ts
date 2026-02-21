@@ -39,9 +39,9 @@ export async function GET(request: Request) {
         GROUP BY oi.product_name ORDER BY total_qty DESC LIMIT 10
       `
       paymentBreakdown = await sql`
-        SELECT order_type as payment_method, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as revenue
+        SELECT payment_method, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as revenue
         FROM orders WHERE created_at::date = CURRENT_DATE AND status != 'cancelled'
-        GROUP BY order_type
+        GROUP BY payment_method
       `
     } else if (period === "monthly") {
       summary = await sql`
@@ -68,9 +68,9 @@ export async function GET(request: Request) {
         GROUP BY oi.product_name ORDER BY total_qty DESC LIMIT 10
       `
       paymentBreakdown = await sql`
-        SELECT order_type as payment_method, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as revenue
+        SELECT payment_method, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as revenue
         FROM orders WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE) AND status != 'cancelled'
-        GROUP BY order_type
+        GROUP BY payment_method
       `
     } else {
       summary = await sql`
@@ -97,9 +97,9 @@ export async function GET(request: Request) {
         GROUP BY oi.product_name ORDER BY total_qty DESC LIMIT 10
       `
       paymentBreakdown = await sql`
-        SELECT order_type as payment_method, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as revenue
+        SELECT payment_method, COUNT(*) as count, COALESCE(SUM(total_amount), 0) as revenue
         FROM orders WHERE DATE_TRUNC('year', created_at) = DATE_TRUNC('year', CURRENT_DATE) AND status != 'cancelled'
-        GROUP BY order_type
+        GROUP BY payment_method
       `
     }
 
