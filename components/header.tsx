@@ -244,7 +244,7 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
           </div>
 
           {/* Admin access button */}
-          <Link
+          {/* <Link
             href="/admin"
             className="hidden items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium transition-all duration-300 hover:scale-[1.03] md:flex"
             style={{
@@ -266,7 +266,7 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
           >
             <Shield className="h-3.5 w-3.5" />
             الإدارة
-          </Link>
+          </Link> */}
 
           {/* Cart button */}
           <button
@@ -328,7 +328,7 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
               </button>
             ))}
 
-            {/* Admin link - mobile */}
+            {/* Admin link - mobile
             <Link
               href="/admin"
               onClick={() => setMobileOpen(false)}
@@ -337,7 +337,7 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
             >
               <Shield className="h-4 w-4" />
               لوحة الإدارة
-            </Link>
+            </Link> */}
 
             {/* ====== MOBILE AUTH BUTTONS ====== */}
             <div

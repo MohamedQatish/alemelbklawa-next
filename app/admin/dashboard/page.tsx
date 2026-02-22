@@ -40,7 +40,20 @@ import {
   FolderOpen,
   Settings2,
 } from "lucide-react";
-
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart, Legend
+} from 'recharts';
+const CHART_COLORS = {
+  primary: '#7B1E2F',
+  gold: '#C5A55A',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  info: '#3b82f6',
+  purple: '#8b5cf6',
+  gradient: ['#7B1E2F', '#C5A55A', '#3b82f6', '#10b981', '#f59e0b']
+};
 /* ============ Count-up Hook ============ */
 function useCountUp(end: number, duration = 800) {
   const [value, setValue] = useState(0);
@@ -837,406 +850,241 @@ export default function AdminDashboard() {
           {/* ========== STATS TAB ========== */}
           {activeTab === "stats" && stats && (
             <div className="flex flex-col gap-8">
-              {/* --- FILTER SECTION --- */}
-              <section className="admin-panel animate-card-enter relative p-4 sm:p-5">
-                <div className="relative z-10">
-                  <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
-                    <h3
-                      className="flex items-center gap-2 text-sm font-bold"
-                      style={{ color: T.accentLight }}
-                    >
-                      <div
-                        className="flex h-6 w-6 items-center justify-center rounded-md"
-                        style={{ background: "hsl(200 80% 55% / 0.15)" }}
-                      >
-                        <Filter
-                          className="h-3 w-3"
-                          style={{ color: T.accentLight }}
-                        />
-                      </div>
-                      تصفية المبيعات حسب التاريخ
-                      {filterLoading && (
-                        <span
-                          className="mr-1.5 inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-transparent"
-                          style={{ borderTopColor: T.accent }}
-                        />
-                      )}
-                    </h3>
+         
+       
+{/* --- إحصائيات الموقع المتطورة --- */}
+<section className="mb-8">
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="flex items-center gap-3 text-xl font-bold" style={{ color: T.accentLight }}>
+      <div className="p-2 rounded-xl" style={{ background: `${T.accent}20` }}>
+        <BarChart3 className="h-5 w-5" />
+      </div>
+      نظرة عامة على الأداء
+    </h2>
+    <div className="flex gap-2">
+      <select className="text-xs rounded-lg px-3 py-2 border" style={{ borderColor: T.border, background: T.surface }}>
+        <option>آخر 7 أيام</option>
+        <option>آخر 30 يوم</option>
+        <option>هذا الشهر</option>
+        <option>هذا العام</option>
+      </select>
+    </div>
+  </div>
 
-                    <div
-                      className="flex gap-0.5 rounded-md p-0.5"
-                      style={{ background: T.surfaceHover }}
-                    >
-                      <button
-                        onClick={() => {
-                          setFilterMode("dropdowns");
-                          setStartDate("");
-                          setEndDate("");
-                        }}
-                        className="flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all duration-300"
-                        style={{
-                          background:
-                            filterMode === "dropdowns"
-                              ? "hsl(200 80% 55% / 0.2)"
-                              : "transparent",
-                          color:
-                            filterMode === "dropdowns"
-                              ? T.accentLight
-                              : T.textMuted,
-                          boxShadow:
-                            filterMode === "dropdowns"
-                              ? `0 0 8px ${T.glow}`
-                              : "none",
-                        }}
-                      >
-                        <CalendarDays className="h-3 w-3" /> يوم / شهر / سنة
-                      </button>
-                      <button
-                        onClick={() => {
-                          setFilterMode("range");
-                          setFilterDay("");
-                          setFilterMonth("");
-                          setFilterYear("");
-                        }}
-                        className="flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all duration-300"
-                        style={{
-                          background:
-                            filterMode === "range"
-                              ? "hsl(200 80% 55% / 0.2)"
-                              : "transparent",
-                          color:
-                            filterMode === "range"
-                              ? T.accentLight
-                              : T.textMuted,
-                          boxShadow:
-                            filterMode === "range"
-                              ? `0 0 8px ${T.glow}`
-                              : "none",
-                        }}
-                      >
-                        <Calendar className="h-3 w-3" /> نطاق مخصص
-                      </button>
-                    </div>
-                  </div>
+  {/* بطاقات المؤشرات الرئيسية - تصميم احترافي */}
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group"
+         style={{ background: T.surface, borderColor: T.border }}>
+      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: 'linear-gradient(180deg, #7B1E2F 0%, #C5A55A 100%)' }} />
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-sm mb-1" style={{ color: T.textMuted }}>إجمالي الإيرادات</p>
+          <p className="text-3xl font-bold" style={{ color: T.text }}>
+            {stats.storeStats.totalRevenue.toFixed(2)} <span className="text-sm" style={{ color: T.accent }}>د.ل</span>
+          </p>
+          <p className="text-xs mt-2 flex items-center gap-1">
+            <TrendingUp className="h-3 w-3 text-green-500" />
+            <span className="text-green-500">+12.5%</span>
+            <span style={{ color: T.textDim }}>من الأمس</span>
+          </p>
+        </div>
+        <div className="p-3 rounded-xl" style={{ background: `${CHART_COLORS.primary}15` }}>
+          <DollarSign className="h-6 w-6" style={{ color: CHART_COLORS.primary }} />
+        </div>
+      </div>
+    </div>
 
-                  <div className="flex flex-wrap items-end gap-3">
-                    {filterMode === "dropdowns" ? (
-                      <>
-                        <FilterSelect
-                          label="اليوم"
-                          value={filterDay}
-                          onChange={setFilterDay}
-                          options={Array.from({ length: 31 }, (_, i) => ({
-                            value: String(i + 1),
-                            label: String(i + 1),
-                          }))}
-                        />
-                        <FilterSelect
-                          label="الشهر"
-                          value={filterMonth}
-                          onChange={setFilterMonth}
-                          options={[
-                            "يناير",
-                            "فبراير",
-                            "مارس",
-                            "أبريل",
-                            "مايو",
-                            "يونيو",
-                            "يوليو",
-                            "أغسطس",
-                            "سبتمبر",
-                            "أكتوبر",
-                            "نوفمبر",
-                            "ديسمبر",
-                          ].map((m, i) => ({
-                            value: String(i + 1),
-                            label: m,
-                          }))}
-                        />
-                        <FilterSelect
-                          label="السنة"
-                          value={filterYear}
-                          onChange={setFilterYear}
-                          options={[2024, 2025, 2026, 2027].map((y) => ({
-                            value: String(y),
-                            label: String(y),
-                          }))}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex flex-col gap-1">
-                          <label
-                            className="text-[11px] font-medium"
-                            style={{ color: T.accentMuted }}
-                          >
-                            من تاريخ
-                          </label>
-                          <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className={`rounded-md border text-xs transition-all duration-300 ${startDate ? "filter-active-glow" : ""}`}
-                            style={{
-                              background: T.surfaceHover,
-                              borderColor: T.border,
-                              color: T.text,
-                            }}
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label
-                            className="text-[11px] font-medium"
-                            style={{ color: T.accentMuted }}
-                          >
-                            إلى تاريخ
-                          </label>
-                          <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className={`rounded-md border text-xs transition-all duration-300 ${endDate ? "filter-active-glow" : ""}`}
-                            style={{
-                              background: T.surfaceHover,
-                              borderColor: T.border,
-                              color: T.text,
-                            }}
-                          />
-                        </div>
-                      </>
-                    )}
+    <div className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group"
+         style={{ background: T.surface, borderColor: T.border }}>
+      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: 'linear-gradient(180deg, #10b981 0%, #34d399 100%)' }} />
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-sm mb-1" style={{ color: T.textMuted }}>مبيعات اليوم</p>
+          <p className="text-3xl font-bold" style={{ color: T.text }}>
+            {stats.todaySales.toFixed(2)} <span className="text-sm" style={{ color: T.accent }}>د.ل</span>
+          </p>
+          <p className="text-xs mt-2 flex items-center gap-1">
+            <Package className="h-3 w-3" style={{ color: T.accent }} />
+            <span style={{ color: T.textDim }}>{stats.totalOrders} طلب مكتمل</span>
+          </p>
+        </div>
+        <div className="p-3 rounded-xl" style={{ background: '#10b98120' }}>
+          <TrendingUp className="h-6 w-6 text-emerald-500" />
+        </div>
+      </div>
+    </div>
 
-                    <button
-                      onClick={resetFilters}
-                      className="admin-btn-glow flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-[11px] font-medium transition-all duration-300"
-                      style={{
-                        borderColor: "hsl(0 70% 55% / 0.25)",
-                        color: "hsl(0 70% 65%)",
-                        background: "hsl(0 70% 55% / 0.08)",
-                      }}
-                    >
-                      <RotateCcw className="h-3 w-3" /> إعادة تعيين
-                    </button>
-                  </div>
+    <div className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group"
+         style={{ background: T.surface, borderColor: T.border }}>
+      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%)' }} />
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-sm mb-1" style={{ color: T.textMuted }}>مبيعات الشهر</p>
+          <p className="text-3xl font-bold" style={{ color: T.text }}>
+            {stats.monthlySales.toFixed(2)} <span className="text-sm" style={{ color: T.accent }}>د.ل</span>
+          </p>
+          <p className="text-xs mt-2 flex items-center gap-1">
+            <Clock className="h-3 w-3 text-amber-500" />
+            <span style={{ color: T.textDim }}>{stats.pendingOrders} طلب قيد الانتظار</span>
+          </p>
+        </div>
+        <div className="p-3 rounded-xl" style={{ background: '#f59e0b20' }}>
+          <BarChart3 className="h-6 w-6 text-amber-500" />
+        </div>
+      </div>
+    </div>
 
-                  {/* Filtered Result Summary */}
-                  {isFiltered && (
-                    <div
-                      className="mt-4 animate-slide-up-fade rounded-lg border p-4"
-                      style={{
-                        borderColor: T.border,
-                        background: T.surfaceDeep,
-                      }}
-                    >
-                      <p
-                        className="mb-1.5 text-xs"
-                        style={{ color: T.accentMuted }}
-                      >
-                        {stats.filteredLabel}
-                      </p>
-                      <div className="grid gap-3 sm:grid-cols-4">
-                        <FilterResultCard
-                          label="المبيعات"
-                          value={stats.filteredSales}
-                          isCurrency
-                          color="hsl(200 80% 65%)"
-                        />
-                        <FilterResultCard
-                          label="الطلبات المكتملة"
-                          value={stats.filteredOrders}
-                          color="hsl(150 70% 55%)"
-                        />
-                        <FilterResultCard
-                          label="قيد الانتظار"
-                          value={stats.filteredPending}
-                          color="hsl(45 90% 55%)"
-                        />
-                        <FilterResultCard
-                          label="ملغية"
-                          value={stats.filteredCancelled}
-                          color="hsl(0 70% 60%)"
-                        />
-                      </div>
-                    </div>
-                  )}
+    <div className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group"
+         style={{ background: T.surface, borderColor: T.border }}>
+      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: 'linear-gradient(180deg, #8b5cf6 0%, #a78bfa 100%)' }} />
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-sm mb-1" style={{ color: T.textMuted }}>إجمالي العملاء</p>
+          <p className="text-3xl font-bold" style={{ color: T.text }}>{stats.totalCustomers}</p>
+          <p className="text-xs mt-2 flex items-center gap-1">
+            <Users className="h-3 w-3" style={{ color: T.accent }} />
+            <span style={{ color: T.textDim }}>عميل نشط</span>
+          </p>
+        </div>
+        <div className="p-3 rounded-xl" style={{ background: '#8b5cf620' }}>
+          <Users className="h-6 w-6 text-purple-500" />
+        </div>
+      </div>
+    </div>
+  </div>
 
-                  {/* Hourly Breakdown */}
-                  {stats.hourlySales.length > 0 && (
-                    <div className="mt-4 animate-slide-up-fade">
-                      <h4
-                        className="mb-2 text-xs font-semibold"
-                        style={{ color: T.accentMuted }}
-                      >
-                        المبيعات بالساعة
-                      </h4>
-                      <div
-                        className="flex items-end gap-0.5 rounded-lg border p-3"
-                        style={{
-                          borderColor: T.border,
-                          background: T.surfaceDeep,
-                          height: "160px",
-                        }}
-                      >
-                        {Array.from({ length: 24 }, (_, hour) => {
-                          const data = stats.hourlySales.find(
-                            (h) => h.hour === hour,
-                          );
-                          const total = data?.total ?? 0;
-                          const maxTotal = Math.max(
-                            ...stats.hourlySales.map((h) => h.total),
-                            1,
-                          );
-                          const heightPct =
-                            total > 0
-                              ? Math.max((total / maxTotal) * 100, 8)
-                              : 2;
-                          return (
-                            <div
-                              key={hour}
-                              className="group relative flex flex-1 flex-col items-center justify-end"
-                              style={{ height: "100%" }}
-                            >
-                              <div
-                                className="pointer-events-none absolute -top-8 z-10 rounded-md px-2 py-1 text-xs opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
-                                style={{
-                                  background: T.surfaceHover,
-                                  color: T.accentLight,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {`${hour}:00 — ${total.toFixed(2)} د.ل`}
-                              </div>
-                              <div
-                                className="hourly-bar w-full"
-                                style={{
-                                  height: `${heightPct}%`,
-                                  background:
-                                    total > 0
-                                      ? `linear-gradient(180deg, ${T.accent} 0%, hsl(200 80% 35%) 100%)`
-                                      : T.surfaceHover,
-                                }}
-                              />
-                              <span
-                                className="mt-1 text-[9px]"
-                                style={{ color: T.textDim }}
-                              >
-                                {hour % 3 === 0 ? `${hour}` : ""}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </section>
+  {/* الرسوم البيانية المتطورة */}
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    {/* الرسم البياني للمبيعات اليومية */}
+    <div className="lg:col-span-2 rounded-2xl border p-5" style={{ background: T.surface, borderColor: T.border }}>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.primary }} />
+          تحليل المبيعات اليومية
+        </h3>
+        <div className="flex gap-3 text-xs">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.primary }} /> المبيعات</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.gold }} /> عدد الطلبات</span>
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={300}>
+        <AreaChart data={stats.hourlySales}>
+          <defs>
+            <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3}/>
+              <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke={`${T.border}40`} />
+          <XAxis dataKey="hour" tickFormatter={(hour) => `${hour}:00`} stroke={T.textDim} />
+          <YAxis yAxisId="left" stroke={T.textDim} />
+          <YAxis yAxisId="right" orientation="right" stroke={T.textDim} />
+          <Tooltip 
+            contentStyle={{ background: T.surfaceDeep, border: `1px solid ${T.border}`, borderRadius: '12px' }}
+            labelStyle={{ color: T.accentLight }}
+          />
+          <Area yAxisId="left" type="monotone" dataKey="total" stroke={CHART_COLORS.primary} fill="url(#salesGradient)" name="المبيعات" />
+          <Bar yAxisId="right" dataKey="count" fill={CHART_COLORS.gold} radius={[4, 4, 0, 0]} name="عدد الطلبات" />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
 
-              {/* --- Website Statistics --- */}
-              <section>
-                <h2
-                  className="mb-4 flex items-center gap-2 text-lg font-bold"
-                  style={{ color: T.accentLight }}
-                >
-                  <BarChart3 className="h-5 w-5" />
-                  إحصائيات الموقع
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <AnimatedStatCard
-                    index={0}
-                    icon={<TrendingUp className="h-6 w-6" />}
-                    label="مبيعات اليوم"
-                    value={stats.todaySales}
-                    isCurrency
-                  />
-                  <AnimatedStatCard
-                    index={1}
-                    icon={<BarChart3 className="h-6 w-6" />}
-                    label="مبيعات الشهر"
-                    value={stats.monthlySales}
-                    isCurrency
-                  />
-                  <AnimatedStatCard
-                    index={2}
-                    icon={<Package className="h-6 w-6" />}
-                    label="الطلبات المكتملة"
-                    value={stats.totalOrders}
-                  />
-                  <AnimatedStatCard
-                    index={3}
-                    icon={<Clock className="h-6 w-6" />}
-                    label="طلبات قيد الانتظار"
-                    value={stats.pendingOrders}
-                    accent="amber"
-                  />
-                  <AnimatedStatCard
-                    index={4}
-                    icon={<Ban className="h-6 w-6" />}
-                    label="الطلبات الملغية"
-                    value={stats.cancelledOrders}
-                    accent="red"
-                  />
-                  <AnimatedStatCard
-                    index={5}
-                    icon={<Users className="h-6 w-6" />}
-                    label="إجمالي العملاء"
-                    value={stats.totalCustomers}
-                  />
-                </div>
-              </section>
+    {/* الرسم البياني الدائري */}
+    <div className="rounded-2xl border p-5" style={{ background: T.surface, borderColor: T.border }}>
+      <h3 className="font-semibold mb-4 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.gold }} />
+        توزيع الطلبات
+      </h3>
+      <ResponsiveContainer width="100%" height={250}>
+        <PieChart>
+          <Pie
+            data={[
+              { name: 'مكتملة', value: stats.totalOrders, color: CHART_COLORS.success },
+              { name: 'قيد الانتظار', value: stats.pendingOrders, color: CHART_COLORS.warning },
+              { name: 'ملغية', value: stats.cancelledOrders, color: CHART_COLORS.danger }
+            ]}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={80}
+            paddingAngle={5}
+            dataKey="value"
+          >
+            {[stats.totalOrders, stats.pendingOrders, stats.cancelledOrders].map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={CHART_COLORS.gradient[index % CHART_COLORS.gradient.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="grid grid-cols-3 gap-2 mt-4">
+        <div className="text-center">
+          <p className="text-xs" style={{ color: T.textDim }}>مكتملة</p>
+          <p className="font-bold text-sm" style={{ color: CHART_COLORS.success }}>{stats.totalOrders}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs" style={{ color: T.textDim }}>قيد الانتظار</p>
+          <p className="font-bold text-sm" style={{ color: CHART_COLORS.warning }}>{stats.pendingOrders}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs" style={{ color: T.textDim }}>ملغية</p>
+          <p className="font-bold text-sm" style={{ color: CHART_COLORS.danger }}>{stats.cancelledOrders}</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
-              {/* --- Store Statistics --- */}
-              <section>
-                <h2
-                  className="mb-4 flex items-center gap-2 text-lg font-bold"
-                  style={{ color: T.accentLight }}
-                >
-                  <Store className="h-5 w-5" /> إحصائيات المتجر
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <AnimatedStatCard
-                    index={0}
-                    icon={<DollarSign className="h-6 w-6" />}
-                    label="إجمالي الإيرادات"
-                    value={stats.storeStats.totalRevenue}
-                    isCurrency
-                    accent="green"
-                  />
-                  <AnimatedStatCard
-                    index={1}
-                    icon={<BarChart3 className="h-6 w-6" />}
-                    label="متوسط قيمة الطلب"
-                    value={stats.storeStats.avgOrderValue}
-                    isCurrency
-                  />
-                  <AnimatedStatCard
-                    index={2}
-                    icon={<Truck className="h-6 w-6" />}
-                    label="إجمالي رسوم التوصيل"
-                    value={stats.storeStats.totalDeliveryFees}
-                    isCurrency
-                  />
-                  <StatCardText
-                    index={3}
-                    icon={<MapPin className="h-6 w-6" />}
-                    label="أكثر مدينة طلباً"
-                    value={
-                      stats.storeStats.topCity
-                        ? `${stats.storeStats.topCity.name} (${stats.storeStats.topCity.count})`
-                        : "لا بيانات"
-                    }
-                  />
-                  <StatCardText
-                    index={4}
-                    icon={<Star className="h-6 w-6" />}
-                    label="أكثر منتج مبيعاً"
-                    value={
-                      stats.storeStats.topProduct
-                        ? `${stats.storeStats.topProduct.name} (${stats.storeStats.topProduct.qty})`
-                        : "لا بيانات"
-                    }
-                  />
-                </div>
-              </section>
+  {/* إحصائيات إضافية - المتجر */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* أكثر المنتجات مبيعاً */}
+    <div className="rounded-2xl border p-5" style={{ background: T.surface, borderColor: T.border }}>
+      <h3 className="font-semibold mb-4 flex items-center gap-2">
+        <Star className="h-4 w-4" style={{ color: CHART_COLORS.gold }} />
+        أفضل المنتجات مبيعاً
+      </h3>
+      {stats.storeStats.topProduct ? (
+        <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: `${CHART_COLORS.primary}10` }}>
+          <div>
+            <p className="font-medium">{stats.storeStats.topProduct.name}</p>
+            <p className="text-xs" style={{ color: T.textDim }}>{stats.storeStats.topProduct.qty} وحدة مباعة</p>
+          </div>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: `${CHART_COLORS.gold}20` }}>
+            <Package className="h-6 w-6" style={{ color: CHART_COLORS.gold }} />
+          </div>
+        </div>
+      ) : (
+        <p className="text-center py-8" style={{ color: T.textDim }}>لا توجد بيانات كافية</p>
+      )}
+    </div>
+
+    {/* المدن الأكثر طلباً */}
+    <div className="rounded-2xl border p-5" style={{ background: T.surface, borderColor: T.border }}>
+      <h3 className="font-semibold mb-4 flex items-center gap-2">
+        <MapPin className="h-4 w-4" style={{ color: CHART_COLORS.info }} />
+        توزيع الطلبات حسب المدينة
+      </h3>
+      {stats.storeStats.topCity ? (
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <div className="flex justify-between mb-2">
+              <span className="text-sm">{stats.storeStats.topCity.name}</span>
+              <span className="text-sm font-bold">{stats.storeStats.topCity.count} طلب</span>
+            </div>
+            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: T.border }}>
+              <div className="h-full rounded-full" style={{ width: '70%', background: `linear-gradient(90deg, ${CHART_COLORS.primary}, ${CHART_COLORS.gold})` }} />
+            </div>
+            <p className="text-xs mt-3" style={{ color: T.textDim }}>أعلى مدينة في الطلبات</p>
+          </div>
+          <div className="p-4 rounded-xl" style={{ background: `${CHART_COLORS.info}15` }}>
+            <Building2 className="h-8 w-8" style={{ color: CHART_COLORS.info }} />
+          </div>
+        </div>
+      ) : (
+        <p className="text-center py-8" style={{ color: T.textDim }}>لا توجد بيانات كافية</p>
+      )}
+    </div>
+  </div>
+</section>
 
               {/* --- Print Sales Reports --- */}
               <section>
@@ -2089,6 +1937,7 @@ function EmptyState({ text }: { text: string }) {
 }
 
 /* ============ Print Sales Report Button ============ */
+/* ============ Print Sales Report Button - نسخة متطابقة مع التصميم الجديد ============ */
 function PrintSalesButton({
   period,
   label,
@@ -2101,13 +1950,8 @@ function PrintSalesButton({
   const [loading, setLoading] = useState(false);
   const periodLabels: Record<string, string> = {
     daily: "اليوم",
-    monthly: "هذا الشهر",
-    yearly: "هذه السنة",
-  };
-  const paymentLabels: Record<string, string> = {
-    card: "بطاقة بنكية",
-    cash: "الدفع عند الاستلام",
-    lypay: "تحويل LYPAY",
+    monthly: "الشهر",
+    yearly: "السنة",
   };
 
   async function handlePrint() {
@@ -2117,6 +1961,11 @@ function PrintSalesButton({
       if (!res.ok) throw new Error();
       const data = await res.json();
       const s = data.summary || {};
+       const paymentLabels = {
+      card: "بطاقة بنكية",
+      cash: "الدفع عند الاستلام",
+      lypay: "تحويل LYPAY",
+    };
       const printWindow = window.open("", "_blank");
       if (!printWindow) return;
       printWindow.document
@@ -2191,7 +2040,7 @@ function PrintSalesButton({
         ${(data.paymentBreakdown || [])
           .map(
             (p: { payment_method: string; count: number; revenue: number }) =>
-              `<tr><td>${paymentLabels[p.payment_method] || p.payment_method}</td><td>${p.count}</td><td>${Number(p.revenue).toFixed(2)} د.ل</td></tr>`,
+              `<tr><td>${paymentLabels[p.payment_method as keyof typeof paymentLabels] || p.payment_method}</td><td>${p.count}</td><td>${Number(p.revenue).toFixed(2)} د.ل</td></tr>`,
           )
           .join("")}
         </tbody></table>`
@@ -2209,32 +2058,68 @@ function PrintSalesButton({
     }
   }
 
+  // تصميم مطابق لبطاقات الإحصائيات الجديدة
+  const getGradientColor = () => {
+    switch(period) {
+      case 'daily': return 'linear-gradient(180deg, #7B1E2F 0%, #C5A55A 100%)';
+      case 'monthly': return 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%)';
+      case 'yearly': return 'linear-gradient(180deg, #10b981 0%, #34d399 100%)';
+      default: return 'linear-gradient(180deg, #7B1E2F 0%, #C5A55A 100%)';
+    }
+  };
+
+  const getIconBg = () => {
+    switch(period) {
+      case 'daily': return `${CHART_COLORS.primary}15`;
+      case 'monthly': return '#f59e0b20';
+      case 'yearly': return '#10b98120';
+      default: return `${CHART_COLORS.primary}15`;
+    }
+  };
+
+  const getIconColor = () => {
+    switch(period) {
+      case 'daily': return CHART_COLORS.primary;
+      case 'monthly': return '#f59e0b';
+      case 'yearly': return '#10b981';
+      default: return CHART_COLORS.primary;
+    }
+  };
+
   return (
     <button
       onClick={handlePrint}
       disabled={loading}
-      className="admin-card group flex cursor-pointer items-center gap-4 p-5 transition-all duration-300 hover:scale-[1.02]"
-      style={{ border: "none" }}
+      className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group w-full text-right"
+      style={{ background: T.surface, borderColor: T.border }}
     >
-      <div className="relative z-10 flex w-full items-center gap-4">
+      {/* الشريط الجانبي الملون */}
+      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: getGradientColor() }} />
+      
+      <div className="relative z-10 flex items-center gap-4">
+        {/* الأيقونة */}
         <div
-          className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
-          style={{ background: "hsl(200 80% 55% / 0.1)", color: T.accentLight }}
+          className="p-3 rounded-xl transition-transform duration-300 group-hover:scale-110"
+          style={{ background: getIconBg() }}
         >
           {loading ? (
             <span
               className="h-5 w-5 animate-spin rounded-full border-2"
-              style={{ borderColor: "transparent", borderTopColor: T.accent }}
+              style={{ borderColor: "transparent", borderTopColor: getIconColor() }}
             />
           ) : (
-            icon
+            <div style={{ color: getIconColor() }}>
+              {icon}
+            </div>
           )}
         </div>
-        <div className="text-right">
+
+        {/* النص */}
+        <div>
           <p className="text-sm font-semibold" style={{ color: T.text }}>
             {label}
           </p>
-          <p className="text-xs" style={{ color: T.textDim }}>
+          <p className="text-xs mt-1" style={{ color: T.textDim }}>
             تقرير {periodLabels[period]}
           </p>
         </div>

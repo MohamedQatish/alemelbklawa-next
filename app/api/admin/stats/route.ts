@@ -160,6 +160,27 @@ export async function GET(request: Request) {
       }))
     }
 
+    // ===== 👇 هنا مكان الإضافة الجديدة 👇 =====
+    // إذا لم يكن هناك فلتر لليوم، نعرض مبيعات اليوم الحالي
+    if (!filterDay && !filterMonth && !filterYear && !startDate && !endDate) {
+      const todayHourlyRes = await sql`
+        SELECT EXTRACT(HOUR FROM created_at)::int as hour,
+               COALESCE(SUM(total_amount), 0) as total,
+               COUNT(*) as count
+        FROM orders
+        WHERE DATE(created_at) = CURRENT_DATE
+          AND status = ANY(${completedStatuses})
+        GROUP BY EXTRACT(HOUR FROM created_at)
+        ORDER BY hour
+      `
+      hourlySales = todayHourlyRes.map((r: Record<string, unknown>) => ({
+        hour: Number(r.hour),
+        total: Number(r.total),
+        count: Number(r.count),
+      }))
+    }
+    // ===== 👆 هنا انتهت الإضافة 👆 =====
+
     // ===== Default (unfiltered) Statistics =====
     const todaySales = await sql`
       SELECT COALESCE(SUM(total_amount), 0) as total
@@ -178,9 +199,9 @@ export async function GET(request: Request) {
     const cancelledOrders = await sql`
       SELECT COUNT(*) as count FROM orders WHERE status = 'cancelled'
     `
-    const totalCustomers = await sql`
-      SELECT COUNT(*) as count FROM users WHERE password_hash IS NOT NULL
-    `
+   const totalCustomers = await sql`
+  SELECT COUNT(*) as count FROM users
+`
 
     // ===== Store Statistics =====
     const totalRevenue = await sql`
@@ -189,8 +210,8 @@ export async function GET(request: Request) {
     const avgOrder = await sql`
       SELECT COALESCE(AVG(total_amount), 0) as avg FROM orders WHERE status = ANY(${completedStatuses})
     `
-    const totalDeliveryFees = await sql`
-      SELECT COALESCE(SUM(delivery_fee), 0) as total FROM orders WHERE status = ANY(${completedStatuses})
+  const totalDeliveryFees = await sql`
+  SELECT COALESCE(SUM(0), 0) as total FROM orders WHERE status = ANY(${completedStatuses})
     `
     const topCity = await sql`
       SELECT city, COUNT(*) as count FROM orders WHERE status = ANY(${completedStatuses})

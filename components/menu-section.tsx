@@ -703,15 +703,17 @@ export default function MenuSection() {
 
   const currentCategory = categories.find((c) => c.id === activeCategory);
 
-  // ===== NEW: Product Modal State =====
-  const [selectedProduct, setSelectedProduct] = useState<DBProduct | null>(
-    null,
-  );
-  // selections: key = groupId, value = array of selected optionIds
+  // ===== Product Modal State with Performance Optimizations =====
+  const [selectedProduct, setSelectedProduct] = useState<DBProduct | null>(null);
   const [selections, setSelections] = useState<Record<number, number[]>>({});
   const [calculating, setCalculating] = useState(false);
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
   const [calculatedOptions, setCalculatedOptions] = useState<any[]>([]);
+  
+  // --- Performance Optimizations: Cache and Debouncing ---
+  const [priceCache, setPriceCache] = useState<Record<string, { price: number; options: any[] }>>({});
+  const calculationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastCalculatedSelectionsRef = useRef<string>('');
 
   // Reset selections when product changes
   useEffect(() => {
@@ -728,56 +730,115 @@ export default function MenuSection() {
       setSelections(initial);
       setCalculatedPrice(null);
       setCalculatedOptions([]);
+      
+      // Clear cache for new product (optional - يمكنك إبقاء الكاش إذا أردت)
+      // setPriceCache({});
     }
   }, [selectedProduct]);
 
-  // Call calculate API whenever selections change
+  // --- Optimized Price Calculation with Cache and Debouncing ---
+  const calculatePriceWithCache = useCallback(async (
+    productId: number, 
+    selectionsKey: string, 
+    selectedOptionIds: { optionId: number }[]
+  ) => {
+    // Check cache first
+    if (priceCache[selectionsKey]) {
+      setCalculatedPrice(priceCache[selectionsKey].price);
+      setCalculatedOptions(priceCache[selectionsKey].options);
+      setCalculating(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/cart/calculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          selectedOptions: selectedOptionIds,
+        }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        const finalPrice = Number(data.finalPrice);
+        
+        // Save to cache
+        setPriceCache(prev => ({
+          ...prev,
+          [selectionsKey]: { price: finalPrice, options: data.selectedOptions }
+        }));
+        
+        setCalculatedPrice(finalPrice);
+        setCalculatedOptions(data.selectedOptions);
+      } else {
+        const error = await res.json();
+        toast.error(error.error || "خطأ في حساب السعر");
+      }
+    } catch {
+      toast.error("فشل الاتصال بالخادم");
+    } finally {
+      setCalculating(false);
+    }
+  }, [priceCache]);
+
+  // Optimized useEffect with debouncing and cache
   useEffect(() => {
     if (!selectedProduct) return;
 
-    // Build array of selected optionIds from all groups
+    // Create unique key for current selection combination
+    const selectionsKey = JSON.stringify(selections);
+    
+    // Skip if same as last calculated selection
+    if (lastCalculatedSelectionsRef.current === selectionsKey) {
+      return;
+    }
+
+    // Build selected options array
     const selectedOptionIds: { optionId: number }[] = [];
     Object.entries(selections).forEach(([groupId, optionIds]) => {
       optionIds.forEach((oid) => selectedOptionIds.push({ optionId: oid }));
     });
 
-    // If no options selected, don't calculate (show base price)
+    // If no options selected, show base price
     if (selectedOptionIds.length === 0) {
       setCalculatedPrice(Number(selectedProduct.base_price));
       setCalculatedOptions([]);
+      lastCalculatedSelectionsRef.current = selectionsKey;
       return;
     }
 
-    const calculate = async () => {
-      setCalculating(true);
-      try {
-        const res = await fetch("/api/cart/calculate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            productId: selectedProduct.id,
-            selectedOptions: selectedOptionIds,
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setCalculatedPrice(Number(data.finalPrice));
-          setCalculatedOptions(data.selectedOptions);
-        } else {
-          const error = await res.json();
-          toast.error(error.error || "خطأ في حساب السعر");
-        }
-      } catch {
-        toast.error("فشل الاتصال بالخادم");
-      } finally {
-        setCalculating(false);
+    // Check cache immediately
+    if (priceCache[selectionsKey]) {
+      setCalculatedPrice(priceCache[selectionsKey].price);
+      setCalculatedOptions(priceCache[selectionsKey].options);
+      lastCalculatedSelectionsRef.current = selectionsKey;
+      return;
+    }
+
+    // Cancel previous calculation
+    if (calculationTimeoutRef.current) {
+      clearTimeout(calculationTimeoutRef.current);
+    }
+
+    setCalculating(true);
+
+    // Debounce: wait 300ms after last change before calculating
+    calculationTimeoutRef.current = setTimeout(() => {
+      calculatePriceWithCache(selectedProduct.id, selectionsKey, selectedOptionIds);
+      lastCalculatedSelectionsRef.current = selectionsKey;
+    }, 300);
+
+    // Cleanup timeout on unmount or re-run
+    return () => {
+      if (calculationTimeoutRef.current) {
+        clearTimeout(calculationTimeoutRef.current);
       }
     };
+  }, [selectedProduct, selections, calculatePriceWithCache, priceCache]);
 
-    calculate();
-  }, [selectedProduct, selections]);
-
-  // Handle option toggle for single/multiple groups
+  // Optimized toggleOption with early return for same selection
   const toggleOption = (groupId: number, optionId: number) => {
     setSelections((prev) => {
       const group = selectedProduct?.option_groups.find(
@@ -788,7 +849,10 @@ export default function MenuSection() {
       const current = prev[groupId] || [];
 
       if (group.selectionType === "single") {
-        // Single: replace selection
+        // If same option is selected, do nothing (prevent unnecessary calculation)
+        if (current.length === 1 && current[0] === optionId) {
+          return prev;
+        }
         return { ...prev, [groupId]: [optionId] };
       } else {
         // Multiple: toggle
@@ -876,15 +940,16 @@ export default function MenuSection() {
           <div className="mx-auto h-1 w-24 rounded-full bg-[var(--gold)]/50" />
         </div>
 
-        {/* Category Tabs - نسختك الجديدة مع التمرير الأفقي للموبايل فقط */}
+        {/* Category Tabs - مع التمرير الأفقي للموبايل فقط */}
         <div
-className="mb-8 sm:mb-14 flex gap-3 overflow-x-auto overflow-y-hidden px-2 sm:flex-wrap sm:justify-center scrollbar-hide"          style={{
+          className="mb-8 sm:mb-14 flex gap-3 overflow-x-auto overflow-y-hidden px-2 sm:flex-wrap sm:justify-center scrollbar-hide"
+          style={{
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(20px)",
             transition: "opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s",
           }}
         >
-          {categories.map((cat, index) => {
+          {categories.map((cat) => {
             const isActive = activeCategory === cat.id;
             return (
               <button
@@ -897,7 +962,7 @@ className="mb-8 sm:mb-14 flex gap-3 overflow-x-auto overflow-y-hidden px-2 sm:fl
                 }`}
                 style={{ minWidth: "90px" }}
               >
-                {/* 3D Icon Container - مع تصغير للموبايل */}
+                {/* 3D Icon Container */}
                 <div className="menu-icon-3d">
                   <div
                     className={`menu-icon-3d-inner flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl transition-all duration-500 icon-container ${
@@ -940,7 +1005,7 @@ className="mb-8 sm:mb-14 flex gap-3 overflow-x-auto overflow-y-hidden px-2 sm:fl
                   </div>
                 </div>
 
-                {/* Label - مع تصغير للموبايل */}
+                {/* Label */}
                 <span
                   className={`text-xs sm:text-sm font-semibold transition-all duration-300 ${
                     isActive
@@ -1161,15 +1226,18 @@ className="mb-8 sm:mb-14 flex gap-3 overflow-x-auto overflow-y-hidden px-2 sm:fl
                 </p>
               )}
 
-              {/* Total Price & Add to Cart */}
+              {/* Total Price & Add to Cart - Improved UX */}
               <div className="mb-4 flex justify-between items-center">
                 <span className="text-sm text-[var(--gold)]/70">
                   السعر النهائي:
                 </span>
                 {calculating ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-[var(--gold)]/50" />
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-[var(--gold)]/50" />
+                    <span className="text-sm text-[var(--gold)]/50">جاري الحساب...</span>
+                  </div>
                 ) : (
-                  <span className="text-xl font-bold text-[var(--gold)] animate-pulse">
+                  <span className="text-xl font-bold text-[var(--gold)]">
                     {calculatedPrice !== null
                       ? calculatedPrice.toFixed(2)
                       : Number(selectedProduct.base_price).toFixed(2)}{" "}
