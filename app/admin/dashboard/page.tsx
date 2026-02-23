@@ -39,21 +39,71 @@ import {
   Building2,
   FolderOpen,
   Settings2,
+  ChevronDown,
+  X,
+  SlidersHorizontal,
+  Download,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  PieChart,
+  Activity,
+  Award,
+  UserCheck,
+  UserX,
+  Wallet,
+  CreditCard,
+  Landmark,
+  Clock3,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart, Legend
-} from 'recharts';
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart as RePieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  Area,
+  AreaChart,
+  Legend,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ComposedChart,
+  Scatter,
+} from "recharts";
+
 const CHART_COLORS = {
-  primary: '#7B1E2F',
-  gold: '#C5A55A',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  info: '#3b82f6',
-  purple: '#8b5cf6',
-  gradient: ['#7B1E2F', '#C5A55A', '#3b82f6', '#10b981', '#f59e0b']
+  primary: "#7B1E2F",
+  gold: "#C5A55A",
+  success: "#10b981",
+  warning: "#f59e0b",
+  danger: "#ef4444",
+  info: "#3b82f6",
+  purple: "#8b5cf6",
+  pink: "#ec4899",
+  indigo: "#6366f1",
+  gradient: [
+    "#7B1E2F",
+    "#C5A55A",
+    "#3b82f6",
+    "#10b981",
+    "#f59e0b",
+    "#8b5cf6",
+    "#ec4899",
+  ],
 };
+
 /* ============ Count-up Hook ============ */
 function useCountUp(end: number, duration = 800) {
   const [value, setValue] = useState(0);
@@ -96,11 +146,20 @@ interface StoreStats {
   totalDeliveryFees: number;
   topCity: { name: string; count: number } | null;
   topProduct: { name: string; qty: number } | null;
+  totalProducts: number;
+  totalCategories: number;
+  activeBranches: number;
+  customerSatisfaction?: number;
+  repeatCustomerRate?: number;
 }
 
 interface Stats {
   todaySales: number;
+  todayProducts?: number;
+  todayDelivery?: number;
   monthlySales: number;
+  monthlyProducts?: number;
+  monthlyDelivery?: number;
   totalOrders: number;
   pendingOrders: number;
   cancelledOrders: number;
@@ -113,6 +172,16 @@ interface Stats {
   filteredLabel: string;
   hourlySales: HourlySale[];
   storeStats: StoreStats;
+  periodComparison?: {
+    previous: number;
+    growth: number;
+  };
+  topSellingCategories?: Array<{
+    name: string;
+    count: number;
+    revenue: number;
+  }>;
+  recentActivity?: Array<{ type: string; count: number; trend: number }>;
 }
 
 interface OrderItem {
@@ -141,6 +210,9 @@ interface Order {
   created_at: string;
   items: OrderItem[];
   order_type?: string | null;
+  branch_id?: number | null;
+  branch_name?: string | null;
+  seconds_remaining?: number;
 }
 
 interface Customer {
@@ -152,6 +224,9 @@ interface Customer {
   address: string | null;
   is_active: boolean;
   created_at: string;
+  total_orders?: number;
+  total_spent?: number;
+  last_order_date?: string;
 }
 
 type Tab =
@@ -199,6 +274,42 @@ const T = {
   textDim: "var(--admin-text-dim)",
 };
 
+/* ============ Filter Types ============ */
+interface AdvancedFilters {
+  dateRange: {
+    start: string;
+    end: string;
+    preset:
+      | "today"
+      | "yesterday"
+      | "thisWeek"
+      | "thisMonth"
+      | "lastMonth"
+      | "thisYear"
+      | "custom"
+      | null;
+  };
+  status: string[];
+  paymentMethod: string[];
+  orderType: string[];
+  city: string[];
+  minAmount: number | null;
+  maxAmount: number | null;
+  customerId: number | null;
+  branchId: number | null;
+  productId: number | null;
+  searchQuery: string;
+  sortBy: "date" | "amount" | "status" | "customer";
+  sortOrder: "asc" | "desc";
+}
+
+interface FilterPreset {
+  id: string;
+  name: string;
+  filters: Partial<AdvancedFilters>;
+  icon?: React.ReactNode;
+}
+
 /* ============ Main Component ============ */
 export default function AdminDashboard() {
   const router = useRouter();
@@ -217,7 +328,39 @@ export default function AdminDashboard() {
   const [tabKey, setTabKey] = useState(0);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Date filter state
+  // Advanced Filter States
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [availableBranches, setAvailableBranches] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
+  const [availableProducts, setAvailableProducts] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
+  const [savedPresets, setSavedPresets] = useState<FilterPreset[]>([]);
+
+  // Advanced Filters
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
+    dateRange: {
+      start: "",
+      end: "",
+      preset: null,
+    },
+    status: [],
+    paymentMethod: [],
+    orderType: [],
+    city: [],
+    minAmount: null,
+    maxAmount: null,
+    customerId: null,
+    branchId: null,
+    productId: null,
+    searchQuery: "",
+    sortBy: "date",
+    sortOrder: "desc",
+  });
+
+  // Date filter state (legacy, will be replaced)
   const [filterDay, setFilterDay] = useState("");
   const [filterMonth, setFilterMonth] = useState("");
   const [filterYear, setFilterYear] = useState("");
@@ -227,8 +370,180 @@ export default function AdminDashboard() {
     "dropdowns",
   );
 
+  // Fetch metadata for filters
+  const fetchFilterMetadata = useCallback(async () => {
+    try {
+      const [citiesRes, branchesRes, productsRes] = await Promise.all([
+        fetch("/api/admin/filters/cities"),
+        fetch("/api/admin/branches?activeOnly=true"),
+        fetch("/api/admin/products?activeOnly=true&fields=id,name"),
+      ]);
+
+      const cities = await citiesRes.json();
+      const branches = await branchesRes.json();
+      const products = await productsRes.json();
+
+      setAvailableCities(Array.isArray(cities) ? cities : []);
+      setAvailableBranches(Array.isArray(branches) ? branches : []);
+      setAvailableProducts(Array.isArray(products) ? products : []);
+    } catch (error) {
+      console.error("Failed to fetch filter metadata:", error);
+    }
+  }, []);
+
+  // Load saved presets from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("admin_filter_presets");
+    if (saved) {
+      try {
+        setSavedPresets(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load presets:", e);
+      }
+    }
+  }, []);
+
+  // Save presets to localStorage
+  const savePresets = (presets: FilterPreset[]) => {
+    localStorage.setItem("admin_filter_presets", JSON.stringify(presets));
+    setSavedPresets(presets);
+  };
+
+  // Apply filter preset
+  const applyPreset = (preset: FilterPreset) => {
+    setAdvancedFilters((prev) => ({
+      ...prev,
+      ...preset.filters,
+    }));
+    setShowFilterPanel(false);
+  };
+
+  // Save current filters as preset
+  const saveAsPreset = () => {
+    const name = prompt("أدخل اسم المجموعة:");
+    if (!name) return;
+
+    const newPreset: FilterPreset = {
+      id: Date.now().toString(),
+      name,
+      filters: { ...advancedFilters },
+    };
+
+    savePresets([...savedPresets, newPreset]);
+  };
+
+  // Delete preset
+  const deletePreset = (id: string) => {
+    savePresets(savedPresets.filter((p) => p.id !== id));
+  };
+
+  // Reset all filters
+  const resetAdvancedFilters = () => {
+    setAdvancedFilters({
+      dateRange: { start: "", end: "", preset: null },
+      status: [],
+      paymentMethod: [],
+      orderType: [],
+      city: [],
+      minAmount: null,
+      maxAmount: null,
+      customerId: null,
+      branchId: null,
+      productId: null,
+      searchQuery: "",
+      sortBy: "date",
+      sortOrder: "desc",
+    });
+  };
+
+  // Apply date range preset
+  const applyDatePreset = (
+    preset:
+      | "today"
+      | "yesterday"
+      | "thisWeek"
+      | "thisMonth"
+      | "lastMonth"
+      | "thisYear",
+  ) => {
+    const now = new Date();
+    const start = new Date();
+    const end = new Date();
+
+    switch (preset) {
+      case "today":
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case "yesterday":
+        start.setDate(start.getDate() - 1);
+        start.setHours(0, 0, 0, 0);
+        end.setDate(end.getDate() - 1);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case "thisWeek":
+        start.setDate(start.getDate() - start.getDay());
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case "thisMonth":
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case "lastMonth":
+        start.setMonth(start.getMonth() - 1, 1);
+        start.setHours(0, 0, 0, 0);
+        end.setMonth(end.getMonth(), 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case "thisYear":
+        start.setMonth(0, 1);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+    }
+
+    setAdvancedFilters((prev) => ({
+      ...prev,
+      dateRange: {
+        start: start.toISOString().split("T")[0],
+        end: end.toISOString().split("T")[0],
+        preset,
+      },
+    }));
+  };
+
   const fetchStats = useCallback(async () => {
     const params = new URLSearchParams();
+
+    // Advanced filters to params
+    if (advancedFilters.dateRange.start)
+      params.set("startDate", advancedFilters.dateRange.start);
+    if (advancedFilters.dateRange.end)
+      params.set("endDate", advancedFilters.dateRange.end);
+    if (advancedFilters.status.length > 0)
+      params.set("status", advancedFilters.status.join(","));
+    if (advancedFilters.paymentMethod.length > 0)
+      params.set("paymentMethod", advancedFilters.paymentMethod.join(","));
+    if (advancedFilters.orderType.length > 0)
+      params.set("orderType", advancedFilters.orderType.join(","));
+    if (advancedFilters.city.length > 0)
+      params.set("city", advancedFilters.city.join(","));
+    if (advancedFilters.minAmount)
+      params.set("minAmount", advancedFilters.minAmount.toString());
+    if (advancedFilters.maxAmount)
+      params.set("maxAmount", advancedFilters.maxAmount.toString());
+    if (advancedFilters.customerId)
+      params.set("customerId", advancedFilters.customerId.toString());
+    if (advancedFilters.branchId)
+      params.set("branchId", advancedFilters.branchId.toString());
+    if (advancedFilters.productId)
+      params.set("productId", advancedFilters.productId.toString());
+    if (advancedFilters.searchQuery)
+      params.set("search", advancedFilters.searchQuery);
+
+    // Legacy filters (backward compatibility)
     if (filterMode === "dropdowns") {
       if (filterDay) params.set("day", filterDay);
       if (filterMonth) params.set("month", filterMonth);
@@ -237,6 +552,7 @@ export default function AdminDashboard() {
       if (startDate) params.set("startDate", startDate);
       if (endDate) params.set("endDate", endDate);
     }
+
     const res = await fetch(`/api/admin/stats?${params.toString()}`);
     if (res.status === 401) {
       router.push("/admin");
@@ -245,6 +561,7 @@ export default function AdminDashboard() {
     const data = await res.json();
     setStats(data);
   }, [
+    advancedFilters,
     filterDay,
     filterMonth,
     filterYear,
@@ -271,12 +588,15 @@ export default function AdminDashboard() {
         const sess = await sessionRes.json();
         if (sess.user) setSessionUser(sess.user);
       }
+
+      // Fetch filter metadata after data is loaded
+      fetchFilterMetadata();
     } catch {
       router.push("/admin");
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, fetchFilterMetadata]);
 
   useEffect(() => {
     fetchStats();
@@ -288,8 +608,15 @@ export default function AdminDashboard() {
       setFilterLoading(true);
       fetchStats().finally(() => setFilterLoading(false));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterDay, filterMonth, filterYear, startDate, endDate, filterMode]);
+  }, [
+    advancedFilters,
+    filterDay,
+    filterMonth,
+    filterYear,
+    startDate,
+    endDate,
+    filterMode,
+  ]);
 
   async function updateOrderStatus(orderId: number, newStatus: string) {
     setRefreshing(true);
@@ -326,7 +653,25 @@ export default function AdminDashboard() {
     setFilterYear("");
     setStartDate("");
     setEndDate("");
+    resetAdvancedFilters();
   }
+
+  // Count active filters
+  const getActiveFilterCount = (): number => {
+    let count = 0;
+    if (advancedFilters.dateRange.start && advancedFilters.dateRange.end)
+      count++;
+    if (advancedFilters.status.length > 0) count++;
+    if (advancedFilters.paymentMethod.length > 0) count++;
+    if (advancedFilters.orderType.length > 0) count++;
+    if (advancedFilters.city.length > 0) count++;
+    if (advancedFilters.minAmount || advancedFilters.maxAmount) count++;
+    if (advancedFilters.customerId) count++;
+    if (advancedFilters.branchId) count++;
+    if (advancedFilters.productId) count++;
+    if (advancedFilters.searchQuery) count++;
+    return count;
+  };
 
   function printInvoice(order: Order) {
     const w = window.open("", "_blank");
@@ -585,7 +930,7 @@ export default function AdminDashboard() {
       <div class="info-box">
         <div class="info-box-title">معلومات العميل</div>
         <div class="info-row"><span class="info-label">الاسم</span><span class="info-value">${order.customer_name}</span></div>
-        <div class="info-row"><span class="info-label">ا��هاتف</span><span class="info-value" dir="ltr">${order.phone}</span></div>
+        <div class="info-row"><span class="info-label">الهاتف</span><span class="info-value" dir="ltr">${order.phone}</span></div>
         
         <div class="info-row"><span class="info-label">المدينة</span><span class="info-value">${order.city}</span></div>
         <div class="info-row"><span class="info-label">العنوان</span><span class="info-value">${order.address}</span></div>
@@ -843,248 +1188,753 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
-
       {/* ===== Content ===== */}
       <div className="mx-auto max-w-7xl p-6">
         <div key={tabKey} className="animate-tab-enter">
           {/* ========== STATS TAB ========== */}
           {activeTab === "stats" && stats && (
             <div className="flex flex-col gap-8">
-         
-       
-{/* --- إحصائيات الموقع المتطورة --- */}
-<section className="mb-8">
-  <div className="flex items-center justify-between mb-6">
-    <h2 className="flex items-center gap-3 text-xl font-bold" style={{ color: T.accentLight }}>
-      <div className="p-2 rounded-xl" style={{ background: `${T.accent}20` }}>
-        <BarChart3 className="h-5 w-5" />
-      </div>
-      نظرة عامة على الأداء
-    </h2>
-    <div className="flex gap-2">
-      <select className="text-xs rounded-lg px-3 py-2 border" style={{ borderColor: T.border, background: T.surface }}>
-        <option>آخر 7 أيام</option>
-        <option>آخر 30 يوم</option>
-        <option>هذا الشهر</option>
-        <option>هذا العام</option>
-      </select>
-    </div>
-  </div>
+              {/* Active Filters Summary */}
+              {getActiveFilterCount() > 0 && (
+                <div
+                  className="flex flex-wrap items-center gap-2 p-3 rounded-xl"
+                  style={{
+                    background: `${T.accent}10`,
+                    border: `1px solid ${T.border}`,
+                  }}
+                >
+                  <Filter className="h-4 w-4" style={{ color: T.accent }} />
+                  <span className="text-sm" style={{ color: T.textMuted }}>
+                    الفلتر النشط:
+                  </span>
+                  {advancedFilters.dateRange.start &&
+                    advancedFilters.dateRange.end && (
+                      <span
+                        className="px-2 py-1 text-xs rounded-full"
+                        style={{ background: T.surfaceDeep }}
+                      >
+                        من{" "}
+                        {new Date(
+                          advancedFilters.dateRange.start,
+                        ).toLocaleDateString("ar-LY")}{" "}
+                        إلى{" "}
+                        {new Date(
+                          advancedFilters.dateRange.end,
+                        ).toLocaleDateString("ar-LY")}
+                      </span>
+                    )}
+                  {advancedFilters.status.map((s) => (
+                    <span
+                      key={s}
+                      className="px-2 py-1 text-xs rounded-full"
+                      style={{ background: T.surfaceDeep }}
+                    >
+                      {s === "pending"
+                        ? "قيد الانتظار"
+                        : s === "confirmed"
+                          ? "مؤكد"
+                          : s === "preparing"
+                            ? "قيد التحضير"
+                            : s === "delivered"
+                              ? "تم التوصيل"
+                              : "ملغي"}
+                    </span>
+                  ))}
+                  {advancedFilters.paymentMethod.map((p) => (
+                    <span
+                      key={p}
+                      className="px-2 py-1 text-xs rounded-full"
+                      style={{ background: T.surfaceDeep }}
+                    >
+                      {p === "cash" ? "كاش" : p === "card" ? "بطاقة" : "LYPAY"}
+                    </span>
+                  ))}
+                  {advancedFilters.city.map((c) => (
+                    <span
+                      key={c}
+                      className="px-2 py-1 text-xs rounded-full"
+                      style={{ background: T.surfaceDeep }}
+                    >
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              )}
 
-  {/* بطاقات المؤشرات الرئيسية - تصميم احترافي */}
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group"
-         style={{ background: T.surface, borderColor: T.border }}>
-      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: 'linear-gradient(180deg, #7B1E2F 0%, #C5A55A 100%)' }} />
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm mb-1" style={{ color: T.textMuted }}>إجمالي الإيرادات</p>
-          <p className="text-3xl font-bold" style={{ color: T.text }}>
-            {stats.storeStats.totalRevenue.toFixed(2)} <span className="text-sm" style={{ color: T.accent }}>د.ل</span>
-          </p>
-          <p className="text-xs mt-2 flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-green-500" />
-            <span className="text-green-500">+12.5%</span>
-            <span style={{ color: T.textDim }}>من الأمس</span>
-          </p>
-        </div>
-        <div className="p-3 rounded-xl" style={{ background: `${CHART_COLORS.primary}15` }}>
-          <DollarSign className="h-6 w-6" style={{ color: CHART_COLORS.primary }} />
-        </div>
-      </div>
-    </div>
+              {/* --- إحصائيات الموقع المتطورة --- */}
+              <section className="mb-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2
+                    className="flex items-center gap-3 text-xl font-bold"
+                    style={{ color: T.accentLight }}
+                  >
+                    <div
+                      className="p-2 rounded-xl"
+                      style={{ background: `${T.accent}20` }}
+                    >
+                      <BarChart3 className="h-5 w-5" />
+                    </div>
+                    نظرة عامة على الأداء
+                  </h2>
+                </div>
 
-    <div className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group"
-         style={{ background: T.surface, borderColor: T.border }}>
-      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: 'linear-gradient(180deg, #10b981 0%, #34d399 100%)' }} />
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm mb-1" style={{ color: T.textMuted }}>مبيعات اليوم</p>
-          <p className="text-3xl font-bold" style={{ color: T.text }}>
-            {stats.todaySales.toFixed(2)} <span className="text-sm" style={{ color: T.accent }}>د.ل</span>
-          </p>
-          <p className="text-xs mt-2 flex items-center gap-1">
-            <Package className="h-3 w-3" style={{ color: T.accent }} />
-            <span style={{ color: T.textDim }}>{stats.totalOrders} طلب مكتمل</span>
-          </p>
-        </div>
-        <div className="p-3 rounded-xl" style={{ background: '#10b98120' }}>
-          <TrendingUp className="h-6 w-6 text-emerald-500" />
-        </div>
-      </div>
-    </div>
+                {/* بطاقات المؤشرات الرئيسية - تصميم احترافي */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div
+                    className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <div
+                      className="absolute top-0 left-0 w-1 h-full"
+                      style={{
+                        background:
+                          "linear-gradient(180deg, #7B1E2F 0%, #C5A55A 100%)",
+                      }}
+                    />
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p
+                          className="text-sm mb-1"
+                          style={{ color: T.textMuted }}
+                        >
+                          إجمالي الإيرادات
+                        </p>
+                        <p
+                          className="text-3xl font-bold"
+                          style={{ color: T.text }}
+                        >
+                          {stats.storeStats.totalRevenue.toFixed(2)}{" "}
+                          <span className="text-sm" style={{ color: T.accent }}>
+                            د.ل
+                          </span>
+                        </p>
+                        {stats.periodComparison && (
+                          <p
+                            className={`text-xs mt-2 flex items-center gap-1 ${stats.periodComparison.growth >= 0 ? "text-green-500" : "text-red-500"}`}
+                          >
+                            <TrendingUp
+                              className={`h-3 w-3 ${stats.periodComparison.growth < 0 ? "rotate-180" : ""}`}
+                            />
+                            {Math.abs(stats.periodComparison.growth).toFixed(1)}
+                            % عن الفترة السابقة
+                          </p>
+                        )}
+                      </div>
+                      <div
+                        className="p-3 rounded-xl"
+                        style={{ background: `${CHART_COLORS.primary}15` }}
+                      >
+                        <DollarSign
+                          className="h-6 w-6"
+                          style={{ color: CHART_COLORS.primary }}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-    <div className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group"
-         style={{ background: T.surface, borderColor: T.border }}>
-      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%)' }} />
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm mb-1" style={{ color: T.textMuted }}>مبيعات الشهر</p>
-          <p className="text-3xl font-bold" style={{ color: T.text }}>
-            {stats.monthlySales.toFixed(2)} <span className="text-sm" style={{ color: T.accent }}>د.ل</span>
-          </p>
-          <p className="text-xs mt-2 flex items-center gap-1">
-            <Clock className="h-3 w-3 text-amber-500" />
-            <span style={{ color: T.textDim }}>{stats.pendingOrders} طلب قيد الانتظار</span>
-          </p>
-        </div>
-        <div className="p-3 rounded-xl" style={{ background: '#f59e0b20' }}>
-          <BarChart3 className="h-6 w-6 text-amber-500" />
-        </div>
-      </div>
-    </div>
+                  <div
+                    className="relative overflow-hidden rounded-2xl border p-5"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <div
+                      className="absolute top-0 left-0 w-1 h-full"
+                      style={{
+                        background:
+                          "linear-gradient(180deg, #10b981 0%, #34d399 100%)",
+                      }}
+                    />
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p
+                          className="text-sm mb-1"
+                          style={{ color: T.textMuted }}
+                        >
+                          مبيعات اليوم
+                        </p>
+                        <p
+                          className="text-3xl font-bold"
+                          style={{ color: T.text }}
+                        >
+                          {stats.todaySales.toFixed(2)}{" "}
+                          <span className="text-sm" style={{ color: T.accent }}>
+                            د.ل
+                          </span>
+                        </p>
+                        <div className="mt-2 flex gap-3 text-xs">
+                          <span style={{ color: T.textDim }}>
+                            منتجات: {stats.todayProducts?.toFixed(2) || "0"} د.ل
+                          </span>
+                          <span style={{ color: T.textDim }}>
+                            توصيل: {stats.todayDelivery?.toFixed(2) || "0"} د.ل
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className="p-3 rounded-xl"
+                        style={{ background: "#10b98120" }}
+                      >
+                        <TrendingUp className="h-6 w-6 text-emerald-500" />
+                      </div>
+                    </div>
+                  </div>
 
-    <div className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group"
-         style={{ background: T.surface, borderColor: T.border }}>
-      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: 'linear-gradient(180deg, #8b5cf6 0%, #a78bfa 100%)' }} />
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm mb-1" style={{ color: T.textMuted }}>إجمالي العملاء</p>
-          <p className="text-3xl font-bold" style={{ color: T.text }}>{stats.totalCustomers}</p>
-          <p className="text-xs mt-2 flex items-center gap-1">
-            <Users className="h-3 w-3" style={{ color: T.accent }} />
-            <span style={{ color: T.textDim }}>عميل نشط</span>
-          </p>
-        </div>
-        <div className="p-3 rounded-xl" style={{ background: '#8b5cf620' }}>
-          <Users className="h-6 w-6 text-purple-500" />
-        </div>
-      </div>
-    </div>
-  </div>
+                  <div
+                    className="relative overflow-hidden rounded-2xl border p-5"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <div
+                      className="absolute top-0 left-0 w-1 h-full"
+                      style={{
+                        background:
+                          "linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%)",
+                      }}
+                    />
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p
+                          className="text-sm mb-1"
+                          style={{ color: T.textMuted }}
+                        >
+                          مبيعات الشهر
+                        </p>
+                        <p
+                          className="text-3xl font-bold"
+                          style={{ color: T.text }}
+                        >
+                          {stats.monthlySales.toFixed(2)}{" "}
+                          <span className="text-sm" style={{ color: T.accent }}>
+                            د.ل
+                          </span>
+                        </p>
+                        <div className="mt-2 flex gap-3 text-xs">
+                          <span style={{ color: T.textDim }}>
+                            منتجات: {stats.monthlyProducts?.toFixed(2) || "0"}{" "}
+                            د.ل
+                          </span>
+                          <span style={{ color: T.textDim }}>
+                            توصيل: {stats.monthlyDelivery?.toFixed(2) || "0"}{" "}
+                            د.ل
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className="p-3 rounded-xl"
+                        style={{ background: "#f59e0b20" }}
+                      >
+                        <BarChart3 className="h-6 w-6 text-amber-500" />
+                      </div>
+                    </div>
+                  </div>
 
-  {/* الرسوم البيانية المتطورة */}
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    {/* الرسم البياني للمبيعات اليومية */}
-    <div className="lg:col-span-2 rounded-2xl border p-5" style={{ background: T.surface, borderColor: T.border }}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.primary }} />
-          تحليل المبيعات اليومية
-        </h3>
-        <div className="flex gap-3 text-xs">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.primary }} /> المبيعات</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.gold }} /> عدد الطلبات</span>
-        </div>
-      </div>
-      <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={stats.hourlySales}>
-          <defs>
-            <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3}/>
-              <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0}/>
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke={`${T.border}40`} />
-          <XAxis dataKey="hour" tickFormatter={(hour) => `${hour}:00`} stroke={T.textDim} />
-          <YAxis yAxisId="left" stroke={T.textDim} />
-          <YAxis yAxisId="right" orientation="right" stroke={T.textDim} />
-          <Tooltip 
-            contentStyle={{ background: T.surfaceDeep, border: `1px solid ${T.border}`, borderRadius: '12px' }}
-            labelStyle={{ color: T.accentLight }}
-          />
-          <Area yAxisId="left" type="monotone" dataKey="total" stroke={CHART_COLORS.primary} fill="url(#salesGradient)" name="المبيعات" />
-          <Bar yAxisId="right" dataKey="count" fill={CHART_COLORS.gold} radius={[4, 4, 0, 0]} name="عدد الطلبات" />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
+                  <div
+                    className="relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <div
+                      className="absolute top-0 left-0 w-1 h-full"
+                      style={{
+                        background:
+                          "linear-gradient(180deg, #8b5cf6 0%, #a78bfa 100%)",
+                      }}
+                    />
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p
+                          className="text-sm mb-1"
+                          style={{ color: T.textMuted }}
+                        >
+                          إجمالي العملاء
+                        </p>
+                        <p
+                          className="text-3xl font-bold"
+                          style={{ color: T.text }}
+                        >
+                          {stats.totalCustomers}
+                        </p>
+                        <p className="text-xs mt-2 flex items-center gap-1">
+                          <Users
+                            className="h-3 w-3"
+                            style={{ color: T.accent }}
+                          />
+                          <span style={{ color: T.textDim }}>عميل نشط</span>
+                        </p>
+                      </div>
+                      <div
+                        className="p-3 rounded-xl"
+                        style={{ background: "#8b5cf620" }}
+                      >
+                        <Users className="h-6 w-6 text-purple-500" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-    {/* الرسم البياني الدائري */}
-    <div className="rounded-2xl border p-5" style={{ background: T.surface, borderColor: T.border }}>
-      <h3 className="font-semibold mb-4 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.gold }} />
-        توزيع الطلبات
-      </h3>
-      <ResponsiveContainer width="100%" height={250}>
-        <PieChart>
-          <Pie
-            data={[
-              { name: 'مكتملة', value: stats.totalOrders, color: CHART_COLORS.success },
-              { name: 'قيد الانتظار', value: stats.pendingOrders, color: CHART_COLORS.warning },
-              { name: 'ملغية', value: stats.cancelledOrders, color: CHART_COLORS.danger }
-            ]}
-            cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={80}
-            paddingAngle={5}
-            dataKey="value"
-          >
-            {[stats.totalOrders, stats.pendingOrders, stats.cancelledOrders].map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={CHART_COLORS.gradient[index % CHART_COLORS.gradient.length]} />
-            ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="grid grid-cols-3 gap-2 mt-4">
-        <div className="text-center">
-          <p className="text-xs" style={{ color: T.textDim }}>مكتملة</p>
-          <p className="font-bold text-sm" style={{ color: CHART_COLORS.success }}>{stats.totalOrders}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs" style={{ color: T.textDim }}>قيد الانتظار</p>
-          <p className="font-bold text-sm" style={{ color: CHART_COLORS.warning }}>{stats.pendingOrders}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs" style={{ color: T.textDim }}>ملغية</p>
-          <p className="font-bold text-sm" style={{ color: CHART_COLORS.danger }}>{stats.cancelledOrders}</p>
-        </div>
-      </div>
-    </div>
-  </div>
+                {/* بطاقات إضافية - مؤشرات متقدمة */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div
+                    className="rounded-2xl border p-4"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="p-2 rounded-xl"
+                        style={{ background: `${CHART_COLORS.gold}20` }}
+                      >
+                        <Award
+                          className="h-5 w-5"
+                          style={{ color: CHART_COLORS.gold }}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs" style={{ color: T.textMuted }}>
+                          متوسط قيمة الطلب
+                        </p>
+                        <p className="text-xl font-bold">
+                          {stats.storeStats.avgOrderValue.toFixed(2)} د.ل
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-  {/* إحصائيات إضافية - المتجر */}
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-    {/* أكثر المنتجات مبيعاً */}
-    <div className="rounded-2xl border p-5" style={{ background: T.surface, borderColor: T.border }}>
-      <h3 className="font-semibold mb-4 flex items-center gap-2">
-        <Star className="h-4 w-4" style={{ color: CHART_COLORS.gold }} />
-        أفضل المنتجات مبيعاً
-      </h3>
-      {stats.storeStats.topProduct ? (
-        <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: `${CHART_COLORS.primary}10` }}>
-          <div>
-            <p className="font-medium">{stats.storeStats.topProduct.name}</p>
-            <p className="text-xs" style={{ color: T.textDim }}>{stats.storeStats.topProduct.qty} وحدة مباعة</p>
-          </div>
-          <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: `${CHART_COLORS.gold}20` }}>
-            <Package className="h-6 w-6" style={{ color: CHART_COLORS.gold }} />
-          </div>
-        </div>
-      ) : (
-        <p className="text-center py-8" style={{ color: T.textDim }}>لا توجد بيانات كافية</p>
-      )}
-    </div>
+                  <div
+                    className="rounded-2xl border p-4"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="p-2 rounded-xl"
+                        style={{ background: `${CHART_COLORS.info}20` }}
+                      >
+                        <Truck
+                          className="h-5 w-5"
+                          style={{ color: CHART_COLORS.info }}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs" style={{ color: T.textMuted }}>
+                          إجمالي رسوم التوصيل
+                        </p>
+                        <p className="text-xl font-bold">
+                          {stats.storeStats.totalDeliveryFees.toFixed(2)} د.ل
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-    {/* المدن الأكثر طلباً */}
-    <div className="rounded-2xl border p-5" style={{ background: T.surface, borderColor: T.border }}>
-      <h3 className="font-semibold mb-4 flex items-center gap-2">
-        <MapPin className="h-4 w-4" style={{ color: CHART_COLORS.info }} />
-        توزيع الطلبات حسب المدينة
-      </h3>
-      {stats.storeStats.topCity ? (
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <div className="flex justify-between mb-2">
-              <span className="text-sm">{stats.storeStats.topCity.name}</span>
-              <span className="text-sm font-bold">{stats.storeStats.topCity.count} طلب</span>
-            </div>
-            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: T.border }}>
-              <div className="h-full rounded-full" style={{ width: '70%', background: `linear-gradient(90deg, ${CHART_COLORS.primary}, ${CHART_COLORS.gold})` }} />
-            </div>
-            <p className="text-xs mt-3" style={{ color: T.textDim }}>أعلى مدينة في الطلبات</p>
-          </div>
-          <div className="p-4 rounded-xl" style={{ background: `${CHART_COLORS.info}15` }}>
-            <Building2 className="h-8 w-8" style={{ color: CHART_COLORS.info }} />
-          </div>
-        </div>
-      ) : (
-        <p className="text-center py-8" style={{ color: T.textDim }}>لا توجد بيانات كافية</p>
-      )}
-    </div>
-  </div>
-</section>
+                  <div
+                    className="rounded-2xl border p-4"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="p-2 rounded-xl"
+                        style={{ background: `${CHART_COLORS.success}20` }}
+                      >
+                        <Activity
+                          className="h-5 w-5"
+                          style={{ color: CHART_COLORS.success }}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs" style={{ color: T.textMuted }}>
+                          نسبة الإنجاز
+                        </p>
+                        <p className="text-xl font-bold">
+                          {stats.totalOrders > 0
+                            ? (
+                                ((stats.totalOrders - stats.cancelledOrders) /
+                                  stats.totalOrders) *
+                                100
+                              ).toFixed(1)
+                            : 0}
+                          %
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* الرسوم البيانية المتطورة */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                  {/* الرسم البياني للمبيعات اليومية */}
+                  {/* الرسم البياني للمبيعات اليومية */}
+                  <div
+                    className="lg:col-span-2 rounded-2xl border p-5"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ background: CHART_COLORS.primary }}
+                        />
+                        تحليل المبيعات اليومية
+                      </h3>
+                      <div className="flex gap-4 text-xs">
+                        <span className="flex items-center gap-1">
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ background: CHART_COLORS.primary }}
+                          />
+                          المبيعات
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ background: CHART_COLORS.gold }}
+                          />
+                          عدد الطلبات
+                        </span>
+                      </div>
+                    </div>
+
+                    {stats.hourlySales && stats.hourlySales.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={280}>
+                        <ComposedChart data={stats.hourlySales}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                          <XAxis
+                            dataKey="hour"
+                            tickFormatter={(hour) => `${hour}:00`}
+                            tick={{ fontSize: 11 }}
+                          />
+                          <YAxis
+                            yAxisId="left"
+                            tick={{ fontSize: 11 }}
+                            tickFormatter={(value) => `${value}`}
+                          />
+                          <YAxis
+                            yAxisId="right"
+                            orientation="right"
+                            tick={{ fontSize: 11 }}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              background: "#fff",
+                              border: "1px solid #ddd",
+                              borderRadius: "8px",
+                              fontSize: "12px",
+                            }}
+                            formatter={(value: any, name: string) => {
+                              if (name === "المبيعات")
+                                return [
+                                  `${Number(value).toFixed(2)} د.ل`,
+                                  name,
+                                ];
+                              return [value, name];
+                            }}
+                          />
+                          <Bar
+                            yAxisId="right"
+                            dataKey="count"
+                            fill={CHART_COLORS.gold}
+                            name="عدد الطلبات"
+                            barSize={24}
+                          />
+                          <Line
+                            yAxisId="left"
+                            type="monotone"
+                            dataKey="total"
+                            stroke={CHART_COLORS.primary}
+                            strokeWidth={2}
+                            name="المبيعات"
+                            dot={{ r: 3 }}
+                          />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div
+                        className="flex items-center justify-center h-[280px] text-center"
+                        style={{ color: T.textDim }}
+                      >
+                        <p>لا توجد مبيعات اليوم</p>
+                      </div>
+                    )}
+
+                    {/* ملخص سريع */}
+                    {stats.hourlySales && stats.hourlySales.length > 0 && (
+                      <div
+                        className="flex justify-between items-center mt-4 pt-3 border-t"
+                        style={{ borderColor: T.border }}
+                      >
+                        <div>
+                          <span
+                            className="text-xs"
+                            style={{ color: T.textDim }}
+                          >
+                            إجمالي المبيعات:{" "}
+                          </span>
+                          <span
+                            className="text-sm font-bold"
+                            style={{ color: CHART_COLORS.primary }}
+                          >
+                            {stats.hourlySales
+                              .reduce((sum, h) => sum + h.total, 0)
+                              .toFixed(2)}{" "}
+                            د.ل
+                          </span>
+                        </div>
+                        <div>
+                          <span
+                            className="text-xs"
+                            style={{ color: T.textDim }}
+                          >
+                            إجمالي الطلبات:{" "}
+                          </span>
+                          <span
+                            className="text-sm font-bold"
+                            style={{ color: CHART_COLORS.gold }}
+                          >
+                            {stats.hourlySales.reduce(
+                              (sum, h) => sum + h.count,
+                              0,
+                            )}
+                          </span>
+                        </div>
+                        <div>
+                          <span
+                            className="text-xs"
+                            style={{ color: T.textDim }}
+                          >
+                            أعلى ساعة:{" "}
+                          </span>
+                          <span className="text-sm font-bold">
+                            {(() => {
+                              const max = stats.hourlySales.reduce((a, b) =>
+                                a.total > b.total ? a : b,
+                              );
+                              return `${max.hour}:00`;
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* الرسم البياني الدائري */}
+                  <div
+                    className="rounded-2xl border p-5"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ background: CHART_COLORS.gold }}
+                      />
+                      توزيع الطلبات
+                    </h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <RePieChart>
+                        <Pie
+                          data={[
+                            {
+                              name: "مكتملة",
+                              value: stats.totalOrders - stats.cancelledOrders,
+                              color: CHART_COLORS.success,
+                            },
+                            {
+                              name: "قيد الانتظار",
+                              value: stats.pendingOrders,
+                              color: CHART_COLORS.warning,
+                            },
+                            {
+                              name: "ملغية",
+                              value: stats.cancelledOrders,
+                              color: CHART_COLORS.danger,
+                            },
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {[
+                            stats.totalOrders - stats.cancelledOrders,
+                            stats.pendingOrders,
+                            stats.cancelledOrders,
+                          ].map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={
+                                CHART_COLORS.gradient[
+                                  index % CHART_COLORS.gradient.length
+                                ]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </RePieChart>
+                    </ResponsiveContainer>
+                    <div className="grid grid-cols-3 gap-2 mt-4">
+                      <div className="text-center">
+                        <p className="text-xs" style={{ color: T.textDim }}>
+                          مكتملة
+                        </p>
+                        <p
+                          className="font-bold text-sm"
+                          style={{ color: CHART_COLORS.success }}
+                        >
+                          {stats.totalOrders - stats.cancelledOrders}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs" style={{ color: T.textDim }}>
+                          قيد الانتظار
+                        </p>
+                        <p
+                          className="font-bold text-sm"
+                          style={{ color: CHART_COLORS.warning }}
+                        >
+                          {stats.pendingOrders}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs" style={{ color: T.textDim }}>
+                          ملغية
+                        </p>
+                        <p
+                          className="font-bold text-sm"
+                          style={{ color: CHART_COLORS.danger }}
+                        >
+                          {stats.cancelledOrders}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* إحصائيات إضافية - المتجر */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* أكثر المنتجات مبيعاً */}
+                  <div
+                    className="rounded-2xl border p-5"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <Star
+                        className="h-4 w-4"
+                        style={{ color: CHART_COLORS.gold }}
+                      />
+                      أفضل المنتجات مبيعاً
+                    </h3>
+                    {stats.storeStats.topProduct ? (
+                      <div
+                        className="flex items-center justify-between p-3 rounded-xl"
+                        style={{ background: `${CHART_COLORS.primary}10` }}
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {stats.storeStats.topProduct.name}
+                          </p>
+                          <p className="text-xs" style={{ color: T.textDim }}>
+                            {stats.storeStats.topProduct.qty} وحدة مباعة
+                          </p>
+                        </div>
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center"
+                          style={{ background: `${CHART_COLORS.gold}20` }}
+                        >
+                          <Package
+                            className="h-6 w-6"
+                            style={{ color: CHART_COLORS.gold }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <p
+                        className="text-center py-8"
+                        style={{ color: T.textDim }}
+                      >
+                        لا توجد بيانات كافية
+                      </p>
+                    )}
+                  </div>
+
+                  {/* المدن الأكثر طلباً */}
+                  <div
+                    className="rounded-2xl border p-5"
+                    style={{ background: T.surface, borderColor: T.border }}
+                  >
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <MapPin
+                        className="h-4 w-4"
+                        style={{ color: CHART_COLORS.info }}
+                      />
+                      توزيع الطلبات حسب المدينة
+                    </h3>
+                    {stats.storeStats.topCity ? (
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <div className="flex justify-between mb-2">
+                            <span className="text-sm">
+                              {stats.storeStats.topCity.name}
+                            </span>
+                            <span className="text-sm font-bold">
+                              {stats.storeStats.topCity.count} طلب
+                            </span>
+                          </div>
+                          <div
+                            className="w-full h-2 rounded-full overflow-hidden"
+                            style={{ background: T.border }}
+                          >
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: "70%",
+                                background: `linear-gradient(90deg, ${CHART_COLORS.primary}, ${CHART_COLORS.gold})`,
+                              }}
+                            />
+                          </div>
+                          <p
+                            className="text-xs mt-3"
+                            style={{ color: T.textDim }}
+                          >
+                            أعلى مدينة في الطلبات
+                          </p>
+                        </div>
+                        <div
+                          className="p-4 rounded-xl"
+                          style={{ background: `${CHART_COLORS.info}15` }}
+                        >
+                          <Building2
+                            className="h-8 w-8"
+                            style={{ color: CHART_COLORS.info }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <p
+                        className="text-center py-8"
+                        style={{ color: T.textDim }}
+                      >
+                        لا توجد بيانات كافية
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* قسم إضافي - توزيع طرق الدفع */}
+                {stats.topSellingCategories &&
+                  stats.topSellingCategories.length > 0 && (
+                    <div
+                      className="mt-6 rounded-2xl border p-5"
+                      style={{ background: T.surface, borderColor: T.border }}
+                    >
+                      <h3 className="font-semibold mb-4 flex items-center gap-2">
+                        <CreditCard
+                          className="h-4 w-4"
+                          style={{ color: CHART_COLORS.purple }}
+                        />
+                        توزيع طرق الدفع
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* يمكن إضافة بيانات توزيع طرق الدفع هنا */}
+                      </div>
+                    </div>
+                  )}
+              </section>
 
               {/* --- Print Sales Reports --- */}
               <section>
@@ -1130,18 +1980,131 @@ export default function AdminDashboard() {
                   );
                 }
               }
+
+              // تطبيق الفلاتر المتقدمة على الطلبات
               const filteredOrders = orders
-                .filter(
-                  (o) =>
-                    !orderDateFilter ||
-                    new Date(o.created_at).toISOString().slice(0, 10) ===
-                      orderDateFilter,
-                )
+                .filter((order) => {
+                  // فلترة حسب النطاق الزمني
+                  if (
+                    advancedFilters.dateRange.start &&
+                    advancedFilters.dateRange.end
+                  ) {
+                    const orderDate = new Date(order.created_at)
+                      .toISOString()
+                      .split("T")[0];
+                    if (
+                      orderDate < advancedFilters.dateRange.start ||
+                      orderDate > advancedFilters.dateRange.end
+                    ) {
+                      return false;
+                    }
+                  }
+
+                  // فلترة حسب الحالة
+                  if (
+                    advancedFilters.status.length > 0 &&
+                    !advancedFilters.status.includes(order.status)
+                  ) {
+                    return false;
+                  }
+
+                  // فلترة حسب طريقة الدفع
+                  if (
+                    advancedFilters.paymentMethod.length > 0 &&
+                    !advancedFilters.paymentMethod.includes(
+                      order.payment_method,
+                    )
+                  ) {
+                    return false;
+                  }
+
+                  // فلترة حسب نوع الطلب
+                  if (
+                    advancedFilters.orderType.length > 0 &&
+                    order.order_type &&
+                    !advancedFilters.orderType.includes(order.order_type)
+                  ) {
+                    return false;
+                  }
+
+                  // فلترة حسب المدينة
+                  if (
+                    advancedFilters.city.length > 0 &&
+                    !advancedFilters.city.includes(order.city)
+                  ) {
+                    return false;
+                  }
+
+                  // فلترة حسب نطاق المبلغ
+                  if (
+                    advancedFilters.minAmount &&
+                    order.total_amount < advancedFilters.minAmount
+                  ) {
+                    return false;
+                  }
+                  if (
+                    advancedFilters.maxAmount &&
+                    order.total_amount > advancedFilters.maxAmount
+                  ) {
+                    return false;
+                  }
+
+                  // فلترة حسب الفرع
+                  if (
+                    advancedFilters.branchId &&
+                    order.branch_id !== advancedFilters.branchId
+                  ) {
+                    return false;
+                  }
+
+                  // فلترة حسب المنتج
+                  if (advancedFilters.productId) {
+                    const hasProduct = order.items.some(
+                      (item) => item.id === advancedFilters.productId,
+                    );
+                    if (!hasProduct) return false;
+                  }
+
+                  // فلترة حسب البحث
+                  if (advancedFilters.searchQuery) {
+                    const query = advancedFilters.searchQuery.toLowerCase();
+                    const matches =
+                      order.customer_name.toLowerCase().includes(query) ||
+                      order.phone.includes(query) ||
+                      order.city.toLowerCase().includes(query) ||
+                      order.items.some((item) =>
+                        item.product_name.toLowerCase().includes(query),
+                      );
+                    if (!matches) return false;
+                  }
+
+                  return true;
+                })
                 .sort((a, b) => {
-                  const da = new Date(a.created_at).getTime();
-                  const db = new Date(b.created_at).getTime();
-                  return orderSortDir === "desc" ? db - da : da - db;
+                  let comparison = 0;
+                  switch (advancedFilters.sortBy) {
+                    case "date":
+                      comparison =
+                        new Date(a.created_at).getTime() -
+                        new Date(b.created_at).getTime();
+                      break;
+                    case "amount":
+                      comparison = a.total_amount - b.total_amount;
+                      break;
+                    case "status":
+                      comparison = a.status.localeCompare(b.status);
+                      break;
+                    case "customer":
+                      comparison = a.customer_name.localeCompare(
+                        b.customer_name,
+                      );
+                      break;
+                  }
+                  return advancedFilters.sortOrder === "desc"
+                    ? -comparison
+                    : comparison;
                 });
+
               console.log("جميع الطلبات:", orders);
               console.log("الطلب الأول:", orders[0]?.items);
 
@@ -1236,6 +2199,19 @@ export default function AdminDashboard() {
                                   {order.id}
                                 </h3>
                                 {getStatusBadge(order.status)}
+                                {/* عرض العداد التنازلي للطلبات قيد الانتظار */}
+{/* عرض العداد التنازلي للطلبات قيد الانتظار */}
+{order.status === 'pending' && (order.seconds_remaining ?? 0) > 0 && (
+  <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+    <Clock className="h-4 w-4 text-amber-400" />
+    <span className="text-xs text-amber-400">
+      متبقي للعميل: {formatTime(order.seconds_remaining ?? 0)}
+    </span>
+    <span className="text-xs text-amber-400/70 mr-auto">
+      (يمكن للعميل إلغاء الطلب)
+    </span>
+  </div>
+)}
                               </div>
                               <p
                                 className="mt-1 text-sm"
@@ -1935,9 +2911,14 @@ function EmptyState({ text }: { text: string }) {
     </div>
   );
 }
-
+// تنسيق الوقت (دقائق:ثواني)
+const formatTime = (seconds: number) => {
+  const totalSeconds = Math.floor(Math.max(0, seconds));
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
 /* ============ Print Sales Report Button ============ */
-/* ============ Print Sales Report Button - نسخة متطابقة مع التصميم الجديد ============ */
 function PrintSalesButton({
   period,
   label,
@@ -1961,11 +2942,11 @@ function PrintSalesButton({
       if (!res.ok) throw new Error();
       const data = await res.json();
       const s = data.summary || {};
-       const paymentLabels = {
-      card: "بطاقة بنكية",
-      cash: "الدفع عند الاستلام",
-      lypay: "تحويل LYPAY",
-    };
+      const paymentLabels = {
+        card: "بطاقة بنكية",
+        cash: "الدفع عند الاستلام",
+        lypay: "تحويل LYPAY",
+      };
       const printWindow = window.open("", "_blank");
       if (!printWindow) return;
       printWindow.document
@@ -2060,29 +3041,41 @@ function PrintSalesButton({
 
   // تصميم مطابق لبطاقات الإحصائيات الجديدة
   const getGradientColor = () => {
-    switch(period) {
-      case 'daily': return 'linear-gradient(180deg, #7B1E2F 0%, #C5A55A 100%)';
-      case 'monthly': return 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%)';
-      case 'yearly': return 'linear-gradient(180deg, #10b981 0%, #34d399 100%)';
-      default: return 'linear-gradient(180deg, #7B1E2F 0%, #C5A55A 100%)';
+    switch (period) {
+      case "daily":
+        return "linear-gradient(180deg, #7B1E2F 0%, #C5A55A 100%)";
+      case "monthly":
+        return "linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%)";
+      case "yearly":
+        return "linear-gradient(180deg, #10b981 0%, #34d399 100%)";
+      default:
+        return "linear-gradient(180deg, #7B1E2F 0%, #C5A55A 100%)";
     }
   };
 
   const getIconBg = () => {
-    switch(period) {
-      case 'daily': return `${CHART_COLORS.primary}15`;
-      case 'monthly': return '#f59e0b20';
-      case 'yearly': return '#10b98120';
-      default: return `${CHART_COLORS.primary}15`;
+    switch (period) {
+      case "daily":
+        return `${CHART_COLORS.primary}15`;
+      case "monthly":
+        return "#f59e0b20";
+      case "yearly":
+        return "#10b98120";
+      default:
+        return `${CHART_COLORS.primary}15`;
     }
   };
 
   const getIconColor = () => {
-    switch(period) {
-      case 'daily': return CHART_COLORS.primary;
-      case 'monthly': return '#f59e0b';
-      case 'yearly': return '#10b981';
-      default: return CHART_COLORS.primary;
+    switch (period) {
+      case "daily":
+        return CHART_COLORS.primary;
+      case "monthly":
+        return "#f59e0b";
+      case "yearly":
+        return "#10b981";
+      default:
+        return CHART_COLORS.primary;
     }
   };
 
@@ -2094,8 +3087,11 @@ function PrintSalesButton({
       style={{ background: T.surface, borderColor: T.border }}
     >
       {/* الشريط الجانبي الملون */}
-      <div className="absolute top-0 left-0 w-1 h-full" style={{ background: getGradientColor() }} />
-      
+      <div
+        className="absolute top-0 left-0 w-1 h-full"
+        style={{ background: getGradientColor() }}
+      />
+
       <div className="relative z-10 flex items-center gap-4">
         {/* الأيقونة */}
         <div
@@ -2105,12 +3101,13 @@ function PrintSalesButton({
           {loading ? (
             <span
               className="h-5 w-5 animate-spin rounded-full border-2"
-              style={{ borderColor: "transparent", borderTopColor: getIconColor() }}
+              style={{
+                borderColor: "transparent",
+                borderTopColor: getIconColor(),
+              }}
             />
           ) : (
-            <div style={{ color: getIconColor() }}>
-              {icon}
-            </div>
+            <div style={{ color: getIconColor() }}>{icon}</div>
           )}
         </div>
 

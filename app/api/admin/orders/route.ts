@@ -13,23 +13,28 @@ export async function GET() {
   try {
     const orders = await sql`
       SELECT o.*, 
-        json_agg(
-          json_build_object(
-            'id', oi.id,
-            'product_name', oi.product_name,
-            'category', oi.category,
-            'quantity', oi.quantity,
-            'unit_price', oi.unit_price,
-            'selected_options', (oi.selected_options::jsonb)::jsonb,
-            'addons', oi.addons,
-            'notes', oi.notes
-          ) ORDER BY oi.id
+        EXTRACT(EPOCH FROM (o.cancel_deadline - NOW())) as seconds_remaining,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', oi.id,
+              'product_name', oi.product_name,
+              'category', oi.category,
+              'quantity', oi.quantity,
+              'unit_price', oi.unit_price,
+              'selected_options', (oi.selected_options::jsonb)::jsonb,  
+              'product_price_snapshot', oi.product_price_snapshot,
+              'final_price_snapshot', oi.final_price_snapshot,
+              'notes', oi.notes
+            ) ORDER BY oi.id
+          ) FILTER (WHERE oi.id IS NOT NULL),
+          '[]'::json
         ) as items
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
       GROUP BY o.id
       ORDER BY o.created_at DESC
-    `
+    `;
     return NextResponse.json(orders)
   } catch (error) {
     console.error("Admin orders error:", error)

@@ -148,20 +148,32 @@ export default function EventsManager() {
   }
 
   /* Image upload */
-  async function handleImageUpload(file: File) {
-    if (file.size > 5 * 1024 * 1024) return
-    setUploading(true)
-    try {
-      const fd = new FormData()
-      fd.append("file", file)
-      const res = await fetch("/api/admin/upload", { method: "POST", body: fd })
-      if (res.ok) {
-        const data = await res.json()
-        setForm((f) => ({ ...f, image_url: data.url }))
-      }
-    } catch { /* empty */ } finally { setUploading(false) }
+/* Image upload */
+async function handleImageUpload(file: File) {
+  if (file.size > 5 * 1024 * 1024) {
+    alert("حجم الصورة كبير جداً. الحد الأقصى 5 ميجابايت");
+    return;
   }
-
+  setUploading(true)
+  try {
+    const fd = new FormData()
+    fd.append("file", file)
+    // ✅ تغيير المسار من /api/admin/upload إلى /api/admin/events/upload
+    const res = await fetch("/api/admin/events/upload", { method: "POST", body: fd })
+    if (res.ok) {
+      const data = await res.json()
+      setForm((f) => ({ ...f, image_url: data.url }))
+    } else {
+      const error = await res.json()
+      alert(error.error || "فشل في رفع الصورة")
+    }
+  } catch (error) {
+    console.error("Upload error:", error)
+    alert("حدث خطأ أثناء رفع الصورة")
+  } finally { 
+    setUploading(false) 
+  }
+}
   function startEdit(ev: EventItem) {
     setEditingId(ev.id)
     setShowAdd(true)
@@ -393,29 +405,44 @@ export default function EventsManager() {
                   style={{ background: T.surface, borderColor: T.border, opacity: ev.is_available ? 1 : 0.55 }}
                 >
                   {/* Image */}
-                  {ev.image_url ? (
-                    <div className="relative h-36 w-full overflow-hidden">
-                      <img src={ev.image_url || "/placeholder.svg"} alt={ev.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" crossOrigin="anonymous" />
-                      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%)" }} />
-                      {ev.is_featured && (
-                        <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: T.accent, color: T.bg }}>
-                          <Star className="h-2.5 w-2.5" /> مميز
-                        </span>
-                      )}
-                      {!ev.is_available && (
-                        <span className="absolute left-2 top-2 rounded-full bg-red-500/80 px-2 py-0.5 text-[10px] font-bold text-white">غير متاح</span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex h-24 items-center justify-center" style={{ background: T.surfaceDeep }}>
-                      <ImageIcon className="h-8 w-8" style={{ color: T.textDim }} />
-                      {ev.is_featured && (
-                        <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: T.accent, color: T.bg }}>
-                          <Star className="h-2.5 w-2.5" /> مميز
-                        </span>
-                      )}
-                    </div>
-                  )}
+                 {ev.image_url ? (
+  <div className="relative h-36 w-full overflow-hidden">
+    <img 
+      src={
+        ev.image_url.startsWith('http') 
+          ? ev.image_url 
+          : ev.image_url.startsWith('/') 
+            ? ev.image_url 
+            : `/${ev.image_url}`
+      } 
+      alt={ev.name} 
+      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" 
+      onError={(e) => {
+        const target = e.target as HTMLImageElement;
+        target.src = '/placeholder.svg';
+        console.log('Image failed to load:', ev.image_url);
+      }}
+    />
+    <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%)" }} />
+    {ev.is_featured && (
+      <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: T.accent, color: T.bg }}>
+        <Star className="h-2.5 w-2.5" /> مميز
+      </span>
+    )}
+    {!ev.is_available && (
+      <span className="absolute left-2 top-2 rounded-full bg-red-500/80 px-2 py-0.5 text-[10px] font-bold text-white">غير متاح</span>
+    )}
+  </div>
+) : (
+  <div className="flex h-24 items-center justify-center" style={{ background: T.surfaceDeep }}>
+    <ImageIcon className="h-8 w-8" style={{ color: T.textDim }} />
+    {ev.is_featured && (
+      <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: T.accent, color: T.bg }}>
+        <Star className="h-2.5 w-2.5" /> مميز
+      </span>
+    )}
+  </div>
+)}
 
                   {/* Info */}
                   <div className="p-4">

@@ -1,14 +1,23 @@
 "use client"
 
 import React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, UserPlus, Loader2, ArrowRight, Check, X, MapPin } from "lucide-react"
 import PhoneInput from "@/components/phone-input"
+import { addToCart } from "@/lib/cart"
+import { toast } from "sonner"
 
 export default function SignupPage() {
   const router = useRouter()
+    useEffect(() => {
+    const pendingProduct = localStorage.getItem("pendingProduct");
+    if (pendingProduct) {
+      toast.info("لديك منتج في انتظار الإضافة بعد التسجيل");
+    }
+  }, []);
+  
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [localNumber, setLocalNumber] = useState("")
@@ -61,10 +70,41 @@ export default function SignupPage() {
         body: JSON.stringify({ name: name.trim(), phone: phone.trim(), password, location: location.trim() }),
       })
       const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || "حدث خطأ")
-        return
-      }
+     if (!res.ok) {
+  setError(data.error || "حدث خطأ")
+  return
+}
+
+// بعد التسجيل الناجح، تحقق من وجود منتج محفوظ
+const pendingProduct = localStorage.getItem("pendingProduct");
+const pendingAction = localStorage.getItem("pendingAction");
+
+if (pendingProduct && pendingAction === "add-to-cart") {
+  try {
+    const product = JSON.parse(pendingProduct);
+    
+    // إضافة المنتج للسلة
+    addToCart({
+      productId: Number(product.id),
+      name: product.name,
+      basePrice: product.price,
+      finalPrice: product.price,
+      category: product.category,
+      selectedOptions: [],
+    });
+    
+    // مسح البيانات المحفوظة
+    localStorage.removeItem("pendingProduct");
+    localStorage.removeItem("pendingAction");
+    
+    toast.success("تمت إضافة المنتج إلى سلتك");
+  } catch (error) {
+    console.error("Failed to add pending product:", error);
+  }
+}
+
+// التوجيه للصفحة الرئيسية
+router.push("/");
       router.push("/")
     } catch {
       setError("حدث خطأ في الاتصال")

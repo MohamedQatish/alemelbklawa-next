@@ -704,12 +704,16 @@ export default function MenuSection() {
   const currentCategory = categories.find((c) => c.id === activeCategory);
 
   // ===== ULTRA-FAST Product Modal State =====
-  const [selectedProduct, setSelectedProduct] = useState<DBProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<DBProduct | null>(
+    null,
+  );
   const [selections, setSelections] = useState<Record<number, number[]>>({});
-  
+
   // --- الحل السحري: Pre-computed cache للأسعار (بدون أي تأخير) ---
-  const [priceCache, setPriceCache] = useState<Record<string, { price: number; options: any[] }>>({});
-  
+  const [priceCache, setPriceCache] = useState<
+    Record<string, { price: number; options: any[] }>
+  >({});
+
   // Reset selections and initialize cache when product changes
   useEffect(() => {
     if (selectedProduct) {
@@ -723,7 +727,7 @@ export default function MenuSection() {
         }
       });
       setSelections(initial);
-      
+
       // --- التحميل المسبق لكل الاحتمالات الممكنة ---
       preloadAllPrices(selectedProduct);
     }
@@ -733,19 +737,19 @@ export default function MenuSection() {
   const preloadAllPrices = async (product: DBProduct) => {
     // تجميع كل الخيارات الممكنة
     const allPossibleSelections: Record<number, number[]>[] = [];
-    
+
     // للمنتجات البسيطة، نضيف الحالة بدون خيارات
     allPossibleSelections.push({});
-    
+
     // نضيف كل خيار منفرد
-    product.option_groups.forEach(group => {
-      group.options.forEach(opt => {
+    product.option_groups.forEach((group) => {
+      group.options.forEach((opt) => {
         const selection: Record<number, number[]> = {};
         selection[group.id] = [opt.id];
         allPossibleSelections.push(selection);
       });
     });
-    
+
     // للمجموعات المتعددة، نضيف توليفات بسيطة (اختياري - حسب احتياجك)
     if (product.option_groups.length >= 2) {
       // مثال: دمج أول خيارين من أول مجموعتين
@@ -761,13 +765,13 @@ export default function MenuSection() {
 
     // تحميل كل الاحتمالات مسبقاً
     const newCache = { ...priceCache };
-    
+
     for (const selection of allPossibleSelections) {
       const selectionsKey = JSON.stringify(selection);
-      
+
       // Skip if already in cache
       if (newCache[selectionsKey]) continue;
-      
+
       // Build selected options array
       const selectedOptionIds: { optionId: number }[] = [];
       Object.entries(selection).forEach(([groupId, optionIds]) => {
@@ -778,7 +782,7 @@ export default function MenuSection() {
       if (selectedOptionIds.length === 0) {
         newCache[selectionsKey] = {
           price: Number(product.base_price),
-          options: []
+          options: [],
         };
         continue;
       }
@@ -793,57 +797,59 @@ export default function MenuSection() {
             selectedOptions: selectedOptionIds,
           }),
         });
-        
+
         if (res.ok) {
           const data = await res.json();
           newCache[selectionsKey] = {
             price: Number(data.finalPrice),
-            options: data.selectedOptions
+            options: data.selectedOptions,
           };
         }
       } catch (error) {
         console.error("Failed to preload price:", error);
       }
     }
-    
+
     setPriceCache(newCache);
   };
 
   // الحصول على السعر المحسوب مباشرة من الكاش (بدون أي تأخير)
   const getCachedPrice = useCallback(() => {
     if (!selectedProduct) return null;
-    
+
     const selectionsKey = JSON.stringify(selections);
     const cached = priceCache[selectionsKey];
-    
+
     if (cached) {
       return cached;
     }
-    
+
     // Fallback: احسب يدوياً إذا لم يكن في الكاش
     let totalPrice = Number(selectedProduct.base_price);
     const selectedOptionsList: any[] = [];
-    
+
     Object.entries(selections).forEach(([groupId, optionIds]) => {
-      const group = selectedProduct.option_groups.find(g => g.id === Number(groupId));
+      const group = selectedProduct.option_groups.find(
+        (g) => g.id === Number(groupId),
+      );
       if (group) {
-        optionIds.forEach(oid => {
-          const option = group.options.find(opt => opt.id === oid);
+        optionIds.forEach((oid) => {
+          const option = group.options.find((opt) => opt.id === oid);
           if (option) {
             totalPrice += Number(option.price);
             selectedOptionsList.push({
               id: option.id,
               name: option.name,
-              price: option.price
+              price: option.price,
             });
           }
         });
       }
     });
-    
+
     return {
       price: totalPrice,
-      options: selectedOptionsList
+      options: selectedOptionsList,
     };
   }, [selectedProduct, selections, priceCache]);
 
@@ -1095,16 +1101,41 @@ export default function MenuSection() {
                       </p>
                     )}
 
-                    {/* Add to Cart */}
                     <button
-                      onClick={() => {
-                        const fullProduct = dbProducts?.find(
-                          (p) => p.id === Number(item.id),
-                        );
-                        if (fullProduct) {
-                          setSelectedProduct(fullProduct);
+                      onClick={async () => {
+                        // التحقق من حالة المستخدم
+                        const res = await fetch("/api/auth/me");
+                        const data = await res.json();
+
+                        if (data.user) {
+                          // مستخدم مسجل - نفتح نافذة الخيارات
+                          const fullProduct = dbProducts?.find(
+                            (p) => p.id === Number(item.id),
+                          );
+                          if (fullProduct) {
+                            setSelectedProduct(fullProduct);
+                          } else {
+                            toast.error("لم يتم العثور على المنتج");
+                          }
                         } else {
-                          toast.error("لم يتم العثور على المنتج");
+                          // مستخدم غير مسجل - نحفظ المنتج ونوجه للتسجيل
+                          const productToSave = {
+                            id: item.id,
+                            name: item.name,
+                            price: item.price,
+                            category: item.category,
+                            description: item.description,
+                            image_url: item.image_url,
+                          };
+
+                          localStorage.setItem(
+                            "pendingProduct",
+                            JSON.stringify(productToSave),
+                          );
+                          localStorage.setItem("pendingAction", "add-to-cart");
+
+                          // توجيه لصفحة التسجيل مع إشارة للعودة
+                          window.location.href = `/signup?redirect=${encodeURIComponent(window.location.pathname)}`;
                         }
                       }}
                       className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--gold)]/30 bg-[var(--gold)]/10 py-3 text-sm font-semibold text-[var(--gold)] transition-all duration-300 hover:bg-[var(--gold)] hover:text-[var(--royal-red-dark)] hover:scale-105 active:scale-95"
@@ -1239,7 +1270,9 @@ export default function MenuSection() {
                   السعر النهائي:
                 </span>
                 <span className="text-xl font-bold text-[var(--gold)]">
-                  {calculatedResult?.price.toFixed(2) || Number(selectedProduct.base_price).toFixed(2)} د.ل
+                  {calculatedResult?.price.toFixed(2) ||
+                    Number(selectedProduct.base_price).toFixed(2)}{" "}
+                  د.ل
                 </span>
               </div>
 

@@ -1,11 +1,22 @@
-"use client"
+"use client";
 
 /* force rebuild */
-import { useState, useEffect, useCallback, useSyncExternalStore } from "react"
-import { Menu, X, ShoppingCart, LogIn, UserPlus, User, LogOut, Loader2, Shield } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { getCartCount, getServerCount, subscribeToCart } from "@/lib/cart"
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
+import {
+  Menu,
+  X,
+  ShoppingCart,
+  LogIn,
+  UserPlus,
+  User,
+  LogOut,
+  Loader2,
+  Package,
+  Shield,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getCartCount, getServerCount, subscribeToCart } from "@/lib/cart";
 
 const navItems = [
   { id: "home", label: "الرئيسية" },
@@ -13,81 +24,85 @@ const navItems = [
   { id: "events", label: "المناسبات" },
   { id: "branches", label: "الفروع" },
   { id: "contact", label: "تواصل معنا" },
-]
+];
 
 interface UserData {
-  id: number
-  name: string
-  phone: string
+  id: number;
+  name: string;
+  phone: string;
 }
 
 export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
-  const router = useRouter()
-  const [scrolled, setScrolled] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [user, setUser] = useState<UserData | null>(null)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [loggingOut, setLoggingOut] = useState(false)
-  const cartCount = useSyncExternalStore(subscribeToCart, getCartCount, getServerCount)
+  const router = useRouter();
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const cartCount = useSyncExternalStore(
+    subscribeToCart,
+    getCartCount,
+    getServerCount,
+  );
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50)
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Check auth status
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => res.json())
       .then((data) => {
-        if (data.user) setUser(data.user)
+        if (data.user) setUser(data.user);
       })
-      .catch(() => {})
-  }, [])
+      .catch(() => {});
+  }, []);
 
   // Close user dropdown on outside click
   useEffect(() => {
-    if (!userMenuOpen) return
-    const handler = () => setUserMenuOpen(false)
-    document.addEventListener("click", handler)
-    return () => document.removeEventListener("click", handler)
-  }, [userMenuOpen])
+    if (!userMenuOpen) return;
+    const handler = () => setUserMenuOpen(false);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [userMenuOpen]);
 
   const handleLogout = useCallback(async () => {
-    setLoggingOut(true)
+    setLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" })
-      setUser(null)
-      setUserMenuOpen(false)
-      setMobileOpen(false)
-      router.refresh()
+      await fetch("/api/auth/logout", { method: "POST" });
+      setUser(null);
+      setUserMenuOpen(false);
+      setMobileOpen(false);
+      router.refresh();
     } finally {
-      setLoggingOut(false)
+      setLoggingOut(false);
     }
-  }, [router])
+  }, [router]);
 
   function scrollTo(id: string) {
-    const el = document.getElementById(id)
+    const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth" })
-      setMobileOpen(false)
+      el.scrollIntoView({ behavior: "smooth" });
+      setMobileOpen(false);
     }
   }
 
   return (
     <header
       className={`fixed top-0 right-0 left-0 z-50 transition-all duration-500 ${
-        scrolled
-          ? "border-b shadow-lg shadow-black/30"
-          : ""
+        scrolled ? "border-b shadow-lg shadow-black/30" : ""
       }`}
       style={{
         background: scrolled
           ? "linear-gradient(135deg, hsl(350 76% 10% / 0.88), hsl(350 76% 14% / 0.82))"
           : "linear-gradient(180deg, hsl(350 76% 6% / 0.7) 0%, hsl(350 76% 6% / 0.3) 60%, transparent 100%)",
         backdropFilter: scrolled ? "blur(16px) saturate(1.3)" : "blur(6px)",
-        WebkitBackdropFilter: scrolled ? "blur(16px) saturate(1.3)" : "blur(6px)",
+        WebkitBackdropFilter: scrolled
+          ? "blur(16px) saturate(1.3)"
+          : "blur(6px)",
         borderColor: scrolled ? "hsl(43 65% 52% / 0.1)" : "transparent",
       }}
     >
@@ -98,7 +113,9 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
           className="brand-title-sm text-xl sm:text-2xl"
           suppressHydrationWarning
         >
-          {"\u0639\u064E\u0627\u0644\u064E\u0645\u064F \u0627\u0644\u0652\u0628\u064E\u0643\u0652\u0644\u064E\u0627\u0648\u064E\u0629"}
+          {
+            "\u0639\u064E\u0627\u0644\u064E\u0645\u064F \u0627\u0644\u0652\u0628\u064E\u0643\u0652\u0644\u064E\u0627\u0648\u064E\u0629"
+          }
         </button>
 
         {/* Desktop Nav */}
@@ -116,7 +133,6 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
 
         {/* Right side: Auth + Cart + Mobile toggle */}
         <div className="flex items-center gap-2 sm:gap-3">
-
           {/* ====== AUTH BUTTONS - DESKTOP ====== */}
           <div className="hidden items-center gap-2 md:flex">
             {user ? (
@@ -132,14 +148,14 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
                     boxShadow: "0 2px 8px hsl(0 0% 0% / 0.2)",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "hsl(43 65% 52% / 0.6)"
+                    e.currentTarget.style.borderColor = "hsl(43 65% 52% / 0.6)";
                     e.currentTarget.style.boxShadow =
-                      "0 2px 16px hsl(43 65% 52% / 0.2)"
+                      "0 2px 16px hsl(43 65% 52% / 0.2)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "hsl(43 65% 52% / 0.4)"
+                    e.currentTarget.style.borderColor = "hsl(43 65% 52% / 0.4)";
                     e.currentTarget.style.boxShadow =
-                      "0 2px 8px hsl(0 0% 0% / 0.2)"
+                      "0 2px 8px hsl(0 0% 0% / 0.2)";
                   }}
                 >
                   <User className="h-4 w-4" />
@@ -161,10 +177,17 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
                       className="border-b px-4 py-3"
                       style={{ borderColor: "hsl(43 65% 52% / 0.1)" }}
                     >
-                      <p className="truncate text-sm font-medium" style={{ color: "hsl(43 65% 52%)" }}>
+                      <p
+                        className="truncate text-sm font-medium"
+                        style={{ color: "hsl(43 65% 52%)" }}
+                      >
                         {user.name}
                       </p>
-                      <p className="mt-0.5 text-xs" style={{ color: "hsl(43 50% 55%)" }} dir="ltr">
+                      <p
+                        className="mt-0.5 text-xs"
+                        style={{ color: "hsl(43 50% 55%)" }}
+                        dir="ltr"
+                      >
                         {user.phone}
                       </p>
                     </div>
@@ -180,7 +203,10 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
                       onClick={handleLogout}
                       disabled={loggingOut}
                       className="flex w-full items-center gap-2 border-t px-4 py-3 text-sm transition-colors duration-200 hover:bg-[hsl(0_50%_20%/0.3)] disabled:opacity-50"
-                      style={{ color: "hsl(0 70% 65%)", borderColor: "hsl(43 65% 52% / 0.1)" }}
+                      style={{
+                        color: "hsl(0 70% 65%)",
+                        borderColor: "hsl(43 65% 52% / 0.1)",
+                      }}
                     >
                       {loggingOut ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -206,14 +232,15 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
                     textShadow: "0 0 8px hsl(43 65% 52% / 0.3)",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "hsl(43 65% 52% / 0.8)"
-                    e.currentTarget.style.background = "hsl(350 76% 14% / 0.7)"
-                    e.currentTarget.style.boxShadow = "0 0 18px hsl(43 65% 52% / 0.2), 0 2px 8px hsl(0 0% 0% / 0.2)"
+                    e.currentTarget.style.borderColor = "hsl(43 65% 52% / 0.8)";
+                    e.currentTarget.style.background = "hsl(350 76% 14% / 0.7)";
+                    e.currentTarget.style.boxShadow =
+                      "0 0 18px hsl(43 65% 52% / 0.2), 0 2px 8px hsl(0 0% 0% / 0.2)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "hsl(43 65% 52% / 0.5)"
-                    e.currentTarget.style.background = "hsl(350 76% 10% / 0.6)"
-                    e.currentTarget.style.boxShadow = "none"
+                    e.currentTarget.style.borderColor = "hsl(43 65% 52% / 0.5)";
+                    e.currentTarget.style.background = "hsl(350 76% 10% / 0.6)";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   <LogIn className="h-4 w-4" />
@@ -225,15 +252,19 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
                   href="/signup"
                   className="btn-shimmer flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-all duration-300 hover:scale-[1.04] active:scale-[0.97]"
                   style={{
-                    background: "linear-gradient(135deg, hsl(43 60% 45%), hsl(43 70% 55%), hsl(43 60% 48%))",
+                    background:
+                      "linear-gradient(135deg, hsl(43 60% 45%), hsl(43 70% 55%), hsl(43 60% 48%))",
                     color: "hsl(350 76% 8%)",
-                    boxShadow: "0 2px 14px hsl(43 65% 52% / 0.35), 0 1px 3px hsl(0 0% 0% / 0.2)",
+                    boxShadow:
+                      "0 2px 14px hsl(43 65% 52% / 0.35), 0 1px 3px hsl(0 0% 0% / 0.2)",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = "0 4px 24px hsl(43 65% 52% / 0.5), 0 2px 8px hsl(0 0% 0% / 0.3)"
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 24px hsl(43 65% 52% / 0.5), 0 2px 8px hsl(0 0% 0% / 0.3)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = "0 2px 14px hsl(43 65% 52% / 0.35), 0 1px 3px hsl(0 0% 0% / 0.2)"
+                    e.currentTarget.style.boxShadow =
+                      "0 2px 14px hsl(43 65% 52% / 0.35), 0 1px 3px hsl(0 0% 0% / 0.2)";
                   }}
                 >
                   <UserPlus className="h-4 w-4" />
@@ -267,8 +298,29 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
             <Shield className="h-3.5 w-3.5" />
             الإدارة
           </Link> */}
-
-          {/* Cart button */}
+                 {/* زر طلباتي */}
+  {/* زر طلباتي - يظهر فقط للمستخدمين المسجلين */}
+{user && (
+  <button
+    onClick={() => {
+      // حفظ رقم المستخدم في localStorage
+      localStorage.setItem("myOrdersPhone", user.phone);
+      // فتح السلة
+      onCartOpen();
+    }}
+    className="flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-all duration-300 hover:scale-105"
+    style={{
+      borderColor: "hsl(43 65% 52% / 0.3)",
+      color: "hsl(43 65% 52%)",
+      background: "hsl(350 76% 12% / 0.7)",
+      backdropFilter: "blur(8px)",
+    }}
+  >
+    <Package className="h-4 w-4" />
+    <span className="hidden sm:inline">طلباتي</span>
+  </button>
+)}
+          {/* Cart button - موجود مسبقاً */}
           <button
             onClick={onCartOpen}
             className="relative rounded-full p-2 transition-all duration-300 hover:scale-110"
@@ -283,7 +335,8 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
               <span
                 className="absolute -top-0.5 -left-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
                 style={{
-                  background: "linear-gradient(135deg, hsl(43 65% 48%), hsl(43 70% 58%))",
+                  background:
+                    "linear-gradient(135deg, hsl(43 65% 48%), hsl(43 70% 58%))",
                   color: "hsl(350 76% 8%)",
                   boxShadow: "0 0 8px hsl(43 65% 52% / 0.5)",
                 }}
@@ -293,6 +346,8 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
             )}
           </button>
 
+
+
           {/* Mobile menu toggle */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -300,7 +355,11 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
             aria-label="القائمة"
             style={{ color: "hsl(43 65% 52%)" }}
           >
-            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
           </button>
         </div>
       </div>
@@ -346,9 +405,15 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
             >
               {user ? (
                 <>
-                  <div className="flex items-center gap-2 text-sm" style={{ color: "hsl(43 70% 70%)" }}>
+                  <div
+                    className="flex items-center gap-2 text-sm"
+                    style={{ color: "hsl(43 70% 70%)" }}
+                  >
                     <User className="h-4 w-4" />
-                    <span>{"مرحبا، "}{user.name}</span>
+                    <span>
+                      {"مرحبا، "}
+                      {user.name}
+                    </span>
                   </div>
                   <button
                     onClick={handleLogout}
@@ -360,7 +425,11 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
                       background: "hsl(0 50% 15% / 0.3)",
                     }}
                   >
-                    {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                    {loggingOut ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <LogOut className="h-4 w-4" />
+                    )}
                     {loggingOut ? "جاري الخروج..." : "تسجيل الخروج"}
                   </button>
                 </>
@@ -388,7 +457,8 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
                     onClick={() => setMobileOpen(false)}
                     className="btn-shimmer flex w-full items-center justify-center gap-2 rounded-xl py-3 text-base font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                     style={{
-                      background: "linear-gradient(135deg, hsl(43 60% 45%), hsl(43 70% 55%), hsl(43 60% 48%))",
+                      background:
+                        "linear-gradient(135deg, hsl(43 60% 45%), hsl(43 70% 55%), hsl(43 60% 48%))",
                       color: "hsl(350 76% 8%)",
                       boxShadow: "0 2px 16px hsl(43 65% 52% / 0.3)",
                     }}
@@ -403,5 +473,5 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
         </div>
       )}
     </header>
-  )
+  );
 }

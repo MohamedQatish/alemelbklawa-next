@@ -324,9 +324,47 @@ export default function EventsSection() {
                               )}
                             </div>
                             <div className="flex items-center gap-2 text-right">
-                              {item.image_url && (
-                                <img src={item.image_url || "/placeholder.svg"} alt="" className="h-8 w-8 rounded-md object-cover" crossOrigin="anonymous" />
-                              )}
+                          {(() => {
+  // دالة مساعدة لعرض الصور بشكل صحيح
+  const getImageUrl = (imageUrl: string | null | undefined): string => {
+    if (!imageUrl) return "/placeholder.svg";
+
+    // إذا كان الرابط كامل (يبدأ بـ http)
+    if (imageUrl.startsWith("http")) {
+      return imageUrl;
+    }
+
+    // إذا كان المسار يبدأ بـ /uploads/ (مثل /uploads/events/...)
+    if (imageUrl.startsWith("/uploads/")) {
+      return imageUrl;
+    }
+
+    // إذا كان المسار يبدأ بـ uploads/ (بدون / في البداية)
+    if (imageUrl.startsWith("uploads/")) {
+      return `/${imageUrl}`;
+    }
+
+    // إذا كان اسم ملف فقط، نفترض أنه في مجلد events
+    return `/uploads/events/${imageUrl}`;
+  };
+
+  const imageUrl = getImageUrl(item.image_url);
+
+  return (
+    imageUrl && (
+      <img
+        src={imageUrl}
+        alt={item.name}
+        className="h-8 w-8 rounded-md object-cover"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          target.src = "/placeholder.svg";
+          console.log('Failed to load image:', imageUrl);
+        }}
+      />
+    )
+  );
+})()}
                               <span className="font-medium">{item.name}</span>
                             </div>
                           </div>

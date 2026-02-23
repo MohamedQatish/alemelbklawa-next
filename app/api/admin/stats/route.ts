@@ -182,14 +182,23 @@ export async function GET(request: Request) {
     // ===== 👆 هنا انتهت الإضافة 👆 =====
 
     // ===== Default (unfiltered) Statistics =====
-    const todaySales = await sql`
-      SELECT COALESCE(SUM(total_amount), 0) as total
-      FROM orders WHERE DATE(created_at) = CURRENT_DATE AND status = ANY(${completedStatuses})
-    `
-    const monthlySales = await sql`
-      SELECT COALESCE(SUM(total_amount), 0) as total
-      FROM orders WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE) AND status = ANY(${completedStatuses})
-    `
+ // مبيعات اليوم (مع تفصيل)
+const todaySales = await sql`
+  SELECT 
+    COALESCE(SUM(total_amount), 0) as total,
+    COALESCE(SUM(total_amount - delivery_fee), 0) as products_total,
+    COALESCE(SUM(delivery_fee), 0) as delivery_total
+  FROM orders WHERE DATE(created_at) = CURRENT_DATE AND status = ANY(${completedStatuses})
+`
+
+// مبيعات الشهر (مع تفصيل)
+const monthlySales = await sql`
+  SELECT 
+    COALESCE(SUM(total_amount), 0) as total,
+    COALESCE(SUM(total_amount - delivery_fee), 0) as products_total,
+    COALESCE(SUM(delivery_fee), 0) as delivery_total
+  FROM orders WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE) AND status = ANY(${completedStatuses})
+`
     const totalOrders = await sql`
       SELECT COUNT(*) as count FROM orders WHERE status = ANY(${completedStatuses})
     `
@@ -210,9 +219,9 @@ export async function GET(request: Request) {
     const avgOrder = await sql`
       SELECT COALESCE(AVG(total_amount), 0) as avg FROM orders WHERE status = ANY(${completedStatuses})
     `
-  const totalDeliveryFees = await sql`
-  SELECT COALESCE(SUM(0), 0) as total FROM orders WHERE status = ANY(${completedStatuses})
-    `
+ const totalDeliveryFees = await sql`
+  SELECT COALESCE(SUM(delivery_fee), 0) as total FROM orders WHERE status = ANY(${completedStatuses})
+`;
     const topCity = await sql`
       SELECT city, COUNT(*) as count FROM orders WHERE status = ANY(${completedStatuses})
       GROUP BY city ORDER BY count DESC LIMIT 1
@@ -225,10 +234,15 @@ export async function GET(request: Request) {
       GROUP BY oi.product_name ORDER BY total_qty DESC LIMIT 1
     `
 
+    
     return NextResponse.json({
       // Real-time (unfiltered) stats
       todaySales: Number(todaySales[0].total),
+      todayProducts: Number(todaySales[0].products_total),
+  todayDelivery: Number(todaySales[0].delivery_total),
       monthlySales: Number(monthlySales[0].total),
+        monthlyProducts: Number(monthlySales[0].products_total), 
+  monthlyDelivery: Number(monthlySales[0].delivery_total),
       totalOrders: Number(totalOrders[0].count),
       pendingOrders: Number(pendingOrders[0].count),
       cancelledOrders: Number(cancelledOrders[0].count),

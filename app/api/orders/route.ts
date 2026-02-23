@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { calculateProductPrice } from "@/lib/pricing";
-
+import { getCurrentUser } from "@/lib/user-auth";
 // تعريف نوع لعناصر الطلب
 interface OrderItem {
   productId: number;
@@ -79,6 +79,9 @@ export async function POST(req: Request) {
     // استخدام sql.begin للمعاملة - بدون تمرير sql كمعامل
     const result = await sql.begin(async () => {
       // 1. إنشاء الطلب
+         // 1. إنشاء الطلب
+         const currentUser = await getCurrentUser();
+
       const [order] = await sql`
         INSERT INTO orders (
           customer_name,
@@ -91,7 +94,9 @@ export async function POST(req: Request) {
           payment_method,
           notes,
           status,
-          created_at
+          created_at,
+          cancel_deadline,
+          user_id
         ) VALUES (
           ${customerName},
           ${phone},
@@ -103,7 +108,9 @@ export async function POST(req: Request) {
           ${paymentMethod},
           ${notes || null},
           'pending',
-          NOW()
+          NOW(),
+          NOW() + INTERVAL '10 minutes'
+          , ${currentUser?.id || null}
         )
         RETURNING id
       `;
@@ -153,10 +160,17 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const orders = await sql`
+    const { searchParams } = new URL(req.url);
+    const phone = searchParams.get('phone');
+    
+    // جلب المستخدم الحالي
+    const currentUser = await getCurrentUser();
+
+    let query = sql`
       SELECT o.*, 
+        EXTRACT(EPOCH FROM (o.cancel_deadline - NOW())) as seconds_remaining,
         COALESCE(
           json_agg(
             json_build_object(
@@ -175,10 +189,41 @@ export async function GET() {
         ) as items
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
+    `;
+
+    // بناء شروط البحث
+    if (currentUser) {
+      // مستخدم مسجل: نبحث بـ user_id أولاً، ثم برقم الهاتف
+      const localPhone = currentUser.phone.replace('+218', '');
+      query = sql`
+        ${query}
+        WHERE o.user_id = ${currentUser.id}
+           OR o.phone = ${currentUser.phone}
+           OR o.phone = ${localPhone}
+           OR o.secondary_phone = ${currentUser.phone}
+           OR o.secondary_phone = ${localPhone}
+      `;
+    } else if (phone) {
+      // زائر: نبحث برقم الهاتف فقط
+      const localPhone = phone.replace('+218', '');
+      query = sql`
+        ${query}
+        WHERE o.phone = ${phone}
+           OR o.phone = ${localPhone}
+           OR o.secondary_phone = ${phone}
+           OR o.secondary_phone = ${localPhone}
+      `;
+    } else {
+      return NextResponse.json([]);
+    }
+
+    query = sql`
+      ${query}
       GROUP BY o.id
       ORDER BY o.created_at DESC
     `;
-    
+
+    const orders = await query;
     return NextResponse.json(orders);
   } catch (error: any) {
     console.error("Orders fetch error:", error);
