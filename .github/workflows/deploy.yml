@@ -41,25 +41,13 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./
         server-dir: ./
-        # تم إضافة timeout كبير لضمان عدم الانقطاع
-        timeout: 900000 
-        # هذه الخاصية مهمة جداً لتقليل عدد الاتصالات المتوازية المتعبة للسيرفر
-        log-level: verbose
-        dangerous-clean-slate: true
-        # الفلتر الذكي: نرفع فقط ما يحتاجه السيرفر للتشغيل
+        dangerous-clean-slate: false
         exclude: |
-         **/.git*
+          **/.git*
           **/node_modules/**
           **/.env*
-          **/.vscode/**
-          **/scripts/**
-          **/*.sql
-          **/README.md
-          **/pnpm-lock.yaml
-          **/src/**
-          **/app/**
-          **/components/**
-          **/lib/**
-          **/hooks/**
-          **/styles/**
-          .github/**
+          public/uploads/**
+          src/
+          .github/
+          pnpm-lock.yaml
+          README.md
