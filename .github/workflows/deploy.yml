@@ -45,7 +45,7 @@ jobs:
         timeout: 900000 
         # هذه الخاصية مهمة جداً لتقليل عدد الاتصالات المتوازية المتعبة للسيرفر
         log-level: verbose
-        dangerous-clean-slate: false
+        dangerous-clean-slate: true
         # الفلتر الذكي: نرفع فقط ما يحتاجه السيرفر للتشغيل
         exclude: |
          **/.git*
