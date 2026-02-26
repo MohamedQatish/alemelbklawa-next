@@ -6,7 +6,7 @@ export async function GET() {
   try {
     await ensureTables();
     const events = await sql`
-SELECT id, name, description, price, category, image_url, is_featured, icon
+      SELECT id, name, description, price, category, image_url, is_featured, icon
       FROM events
       WHERE is_available = true
       ORDER BY category, sort_order, name
