@@ -47,6 +47,7 @@ jobs:
           **/node_modules/**
           **/.env*
           public/uploads/**
+          public/images/products/**
           src/
           .github/
           pnpm-lock.yaml

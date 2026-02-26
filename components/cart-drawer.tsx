@@ -2,8 +2,7 @@
 
 import React from "react";
 import { useSyncExternalStore, useState, useEffect, useCallback } from "react";
-import { X, Plus, Minus, Trash2, ShoppingCart } from "lucide-react";
-import {
+import { X, Plus, Minus, Trash2, ShoppingCart, Search, ChevronDown } from "lucide-react";import {
   getCart,
   subscribeToCart,
   updateQuantity,
@@ -38,6 +37,16 @@ interface CartItemDisplay {
   notes?: string;
 }
 
+
+// قائمة الدول المدعومة مع عدد الأرقام المطلوبة (بدون الصفر اللي في الأول)
+const countries = [
+  { code: "+218", name: "ليبيا", iso: "LY", length: 9 },
+  { code: "+20", name: "مصر", iso: "EG", length: 10 },
+  { code: "+216", name: "تونس", iso: "TN", length: 8 },
+  { code: "+213", name: "الجزائر", iso: "DZ", length: 9 },
+  { code: "+212", name: "المغرب", iso: "MA", length: 9 },
+];
+
 export default function CartDrawer({
   open,
   onClose,
@@ -60,7 +69,7 @@ export default function CartDrawer({
     getCartCount,
     getServerCount,
   );
-  
+
   const [showMyOrders, setShowMyOrders] = useState(false);
   const [customerPhone, setCustomerPhone] = useState("");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -68,7 +77,9 @@ export default function CartDrawer({
   const [form, setForm] = useState({
     name: "",
     address: "",
+    phoneCode: "+218", // السطر الجديد اللي ضفناه
     phone: "",
+    secondaryPhoneCode: "+218", // السطر الجديد اللي ضفناه
     secondaryPhone: "",
     city: "",
     paymentMethod: "",
@@ -77,6 +88,11 @@ export default function CartDrawer({
   });
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+
+  // States للتحكم في القائمة المنسدلة المخصصة
+  const [isPrimaryDropdownOpen, setIsPrimaryDropdownOpen] = useState(false);
+  const [isSecondaryDropdownOpen, setIsSecondaryDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // تبسيط useEffect - إزالة fetch المعقد
   useEffect(() => {
@@ -138,15 +154,49 @@ export default function CartDrawer({
       return;
     }
 
+    const cleanPhone = form.phone.replace(/^0/, ''); // نشيل الصفر لو العميل كتبه
+    const primaryCountry = countries.find((c) => c.code === form.phoneCode);
+
+    // فحص طول الرقم الأساسي
+    if (primaryCountry && cleanPhone.length !== primaryCountry.length) {
+      toast.error(`رقم الهاتف لـ ${primaryCountry.name} يجب أن يتكون من ${primaryCountry.length} أرقام (بدون الصفر)`);
+      return; // نوقف الإرسال فوراً
+    }
+
+    const fullPhone = `${form.phoneCode}${cleanPhone}`; // دمج الرقم الأساسي
+
+    let fullSecondaryPhone = "";
+    if (form.secondaryPhone) {
+      const cleanSec = form.secondaryPhone.replace(/^0/, '');
+      const secCountry = countries.find((c) => c.code === form.secondaryPhoneCode);
+      
+      // فحص طول الرقم الثانوي (لو العميل كتبه)
+      if (secCountry && cleanSec.length !== secCountry.length) {
+        toast.error(`الرقم الثانوي لـ ${secCountry.name} يجب أن يتكون من ${secCountry.length} أرقام`);
+        return; // نوقف الإرسال فوراً
+      }
+      fullSecondaryPhone = `${form.secondaryPhoneCode}${cleanSec}`;
+    }
+
     setSubmitting(true);
     try {
+      // السحر هنا: دمج كود الدولة مع الرقم وحذف الصفر في البداية لو موجود
+      const cleanPhone = form.phone.replace(/^0/, '');
+      const fullPhone = `${form.phoneCode}${cleanPhone}`;
+
+      let fullSecondaryPhone = "";
+      if (form.secondaryPhone) {
+        const cleanSec = form.secondaryPhone.replace(/^0/, '');
+        fullSecondaryPhone = `${form.secondaryPhoneCode}${cleanSec}`;
+      }
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: form.name,
-          phone: form.phone,
-          secondaryPhone: form.secondaryPhone,
+          phone: fullPhone, // هنبعت الرقم المدمج
+          secondaryPhone: fullSecondaryPhone, // هنبعت الرقم المدمج
           address: form.address,
           city: form.city,
           deliveryFee,
@@ -173,7 +223,9 @@ export default function CartDrawer({
         setCustomerPhone(form.phone);
         clearCart();
       } else {
-        toast.error("حدث خطأ أثناء إرسال الطلب");
+        // السحر هنا: هنقرأ رسالة الخطأ اللي جاية من الباك إند ونعرضها!
+        const errorData = await res.json();
+        toast.error(errorData.error || "حدث خطأ أثناء إرسال الطلب");
       }
     } catch {
       toast.error("حدث خطأ في الاتصال");
@@ -281,27 +333,163 @@ export default function CartDrawer({
                 />
               </div>
 
-              <div>
+{/* حقل رقم الهاتف الرئيسي */}
+{/* === حقل رقم الهاتف الرئيسي === */}
+              <div className="relative">
                 <label className="mb-2 block text-sm font-semibold text-[var(--gold)]">رقم الهاتف الرئيسي *</label>
-                <input
-                  required
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full rounded-xl border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/60 px-4 py-3 text-[var(--cream)] placeholder:text-[var(--gold)]/30 focus:border-[var(--gold)]/50 focus:outline-none"
-                  placeholder="09XXXXXXXX"
-                  dir="ltr"
-                />
+                <div className="flex w-full items-center rounded-xl border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/60 focus-within:border-[var(--gold)]/50">
+                  
+                  {/* الزرار اللي بيفتح القائمة */}
+                  <div
+                    onClick={() => {
+                      setIsPrimaryDropdownOpen(!isPrimaryDropdownOpen);
+                      setIsSecondaryDropdownOpen(false);
+                      setSearchQuery("");
+                    }}
+                    className="flex h-full cursor-pointer items-center gap-1 border-l border-[var(--gold)]/20 px-3 py-3 text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/10"
+                    dir="ltr"
+                  >
+                    <ChevronDown className="h-4 w-4 opacity-70" />
+                    <span className="font-bold">{form.phoneCode}</span>
+                  </div>
+
+                  {/* حقل إدخال الرقم */}
+                  <input
+                    required
+                    maxLength={countries.find((c) => c.code === form.phoneCode)?.length}
+                    value={form.phone}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      setForm({ ...form, phone: val });
+                    }}
+                    className="w-full bg-transparent px-4 py-3 text-[var(--cream)] placeholder:text-[var(--gold)]/30 outline-none"
+                    placeholder="9XXXXXXXX"
+                    dir="ltr"
+                    type="tel"
+                  />
+                </div>
+
+                {/* القائمة المنسدلة المخصصة (بتظهر بس لما تضغط) */}
+                {isPrimaryDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsPrimaryDropdownOpen(false)} />
+                    <div className="absolute right-0 top-[100%] z-50 mt-2 w-[320px] max-w-full rounded-2xl border border-[var(--gold)]/20 bg-[#2a0a0f] p-4 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+                      
+                      {/* شريط البحث */}
+                      <div className="mb-4 flex items-center rounded-xl bg-white px-3 py-2.5">
+                        <Search className="h-5 w-5 text-gray-500" />
+                        <input
+                          type="text"
+                          placeholder="بحث عن الدولة..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full bg-transparent px-2 text-sm text-black outline-none placeholder:text-gray-400"
+                        />
+                      </div>
+
+                      {/* قائمة الدول */}
+                      <div className="max-h-[220px] overflow-y-auto pr-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--gold)]/40 [&::-webkit-scrollbar]:w-1.5">
+                        {countries
+                          .filter(c => c.name.includes(searchQuery) || c.code.includes(searchQuery))
+                          .map((c) => (
+                            <div
+                              key={`primary-${c.iso}`}
+                              onClick={() => {
+                                setForm({ ...form, phoneCode: c.code });
+                                setIsPrimaryDropdownOpen(false);
+                              }}
+                              className={`mb-1 flex cursor-pointer items-center justify-between rounded-xl px-4 py-3 transition-colors hover:bg-[var(--gold)]/10 ${form.phoneCode === c.code ? 'bg-[var(--gold)]/10' : ''}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="w-6 text-sm font-bold text-[var(--gold)]">{c.iso}</span>
+                                <span className="text-sm font-medium text-[var(--cream)]">{c.name}</span>
+                              </div>
+                              <div className="flex items-center gap-3" dir="ltr">
+                                <span className="text-sm font-bold text-[var(--gold)]">{c.code}</span>
+                                <div className={`h-2 w-2 rounded-full ${form.phoneCode === c.code ? 'bg-[var(--gold)]' : 'bg-transparent'}`} />
+                              </div>
+                            </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-[var(--gold)]">رقم هاتف ثانوي</label>
-                <input
-                  value={form.secondaryPhone}
-                  onChange={(e) => setForm({ ...form, secondaryPhone: e.target.value })}
-                  className="w-full rounded-xl border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/60 px-4 py-3 text-[var(--cream)] placeholder:text-[var(--gold)]/30 focus:border-[var(--gold)]/50 focus:outline-none"
-                  placeholder="اختياري"
-                  dir="ltr"
-                />
+              {/* === حقل رقم الهاتف الثانوي === */}
+              <div className="relative">
+                <label className="mb-2 block text-sm font-semibold text-[var(--gold)]">رقم هاتف ثانوي (اختياري)</label>
+                <div className="flex w-full items-center rounded-xl border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/60 focus-within:border-[var(--gold)]/50">
+                  
+                  <div
+                    onClick={() => {
+                      setIsSecondaryDropdownOpen(!isSecondaryDropdownOpen);
+                      setIsPrimaryDropdownOpen(false);
+                      setSearchQuery("");
+                    }}
+                    className="flex h-full cursor-pointer items-center gap-1 border-l border-[var(--gold)]/20 px-3 py-3 text-[var(--gold)] transition-colors hover:bg-[var(--gold)]/10"
+                    dir="ltr"
+                  >
+                    <ChevronDown className="h-4 w-4 opacity-70" />
+                    <span className="font-bold">{form.secondaryPhoneCode}</span>
+                  </div>
+
+                  <input
+                    maxLength={countries.find((c) => c.code === form.secondaryPhoneCode)?.length}
+                    value={form.secondaryPhone}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      setForm({ ...form, secondaryPhone: val });
+                    }}
+                    className="w-full bg-transparent px-4 py-3 text-[var(--cream)] placeholder:text-[var(--gold)]/30 outline-none"
+                    placeholder="9XXXXXXXX"
+                    dir="ltr"
+                    type="tel"
+                  />
+                </div>
+
+                {isSecondaryDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsSecondaryDropdownOpen(false)} />
+                    <div className="absolute right-0 top-[100%] z-50 mt-2 w-[320px] max-w-full rounded-2xl border border-[var(--gold)]/20 bg-[#2a0a0f] p-4 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+                      
+                      <div className="mb-4 flex items-center rounded-xl bg-white px-3 py-2.5">
+                        <Search className="h-5 w-5 text-gray-500" />
+                        <input
+                          type="text"
+                          placeholder="بحث عن الدولة..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full bg-transparent px-2 text-sm text-black outline-none placeholder:text-gray-400"
+                        />
+                      </div>
+
+                      <div className="max-h-[220px] overflow-y-auto pr-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--gold)]/40 [&::-webkit-scrollbar]:w-1.5">
+                        {countries
+                          .filter(c => c.name.includes(searchQuery) || c.code.includes(searchQuery))
+                          .map((c) => (
+                            <div
+                              key={`sec-${c.iso}`}
+                              onClick={() => {
+                                setForm({ ...form, secondaryPhoneCode: c.code });
+                                setIsSecondaryDropdownOpen(false);
+                              }}
+                              className={`mb-1 flex cursor-pointer items-center justify-between rounded-xl px-4 py-3 transition-colors hover:bg-[var(--gold)]/10 ${form.secondaryPhoneCode === c.code ? 'bg-[var(--gold)]/10' : ''}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="w-6 text-sm font-bold text-[var(--gold)]">{c.iso}</span>
+                                <span className="text-sm font-medium text-[var(--cream)]">{c.name}</span>
+                              </div>
+                              <div className="flex items-center gap-3" dir="ltr">
+                                <span className="text-sm font-bold text-[var(--gold)]">{c.code}</span>
+                                <div className={`h-2 w-2 rounded-full ${form.secondaryPhoneCode === c.code ? 'bg-[var(--gold)]' : 'bg-transparent'}`} />
+                              </div>
+                            </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div>

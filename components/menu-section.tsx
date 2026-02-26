@@ -1044,110 +1044,208 @@ export default function MenuSection() {
           })}
         </div>
 
-        {/* Products Grid */}
+             {/* Products Grid - تصميم متجاوب ذكي */}
         {loadingProducts ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-[var(--gold)]/50" />
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {currentCategory?.items.map((item, index) => {
-              const imgUrl =
-                "image_url" in item
-                  ? (item as { image_url?: string }).image_url
-                  : undefined;
-              return (
-                <div
-                  key={item.id}
-                  className="group overflow-hidden rounded-2xl border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/60 backdrop-blur-sm transition-all duration-500 hover:border-[var(--gold)]/50 hover:shadow-2xl hover:shadow-[var(--gold)]/20 hover:-translate-y-1"
-                  style={{
-                    opacity: visible ? 1 : 0,
-                    transform: visible ? "translateY(0)" : "translateY(20px)",
-                    transition: `opacity 0.5s ease ${index * 0.04 + 0.3}s, transform 0.5s ease ${index * 0.04 + 0.3}s, box-shadow 0.3s ease, border-color 0.3s ease`,
-                  }}
+          <>
+            {/* ===== عرض للموبايل - بطاقات صغيرة قابلة للتمرير ===== */}
+            <div className="block sm:hidden">
+              <div className="relative">
+                {/* حاوية التمرير الأفقي */}
+                <div 
+                  className="flex gap-3 overflow-x-auto pb-12 scrollbar-hide snap-x snap-mandatory"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
-                  {/* Product Image */}
-                  {imgUrl && (
-                    <div className="relative h-44 w-full overflow-hidden">
-                      <img
-                        src={imgUrl}
-                        alt={item.name}
-                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        crossOrigin="anonymous"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-transparent to-transparent" />
+                  {currentCategory?.items.map((item, index) => {
+                    const imgUrl = "image_url" in item ? (item as { image_url?: string }).image_url : undefined;
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex-shrink-0 w-[160px] snap-start group/product"
+                      >
+                        <div
+                          className="h-full rounded-xl border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/60 backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-[var(--gold)]/40"
+                        >
+                          {/* Product Image - أصغر حجماً */}
+                          {imgUrl && (
+                            <div className="relative h-32 w-full overflow-hidden">
+                              <img
+                                src={imgUrl}
+                                alt={item.name}
+                                className="h-full w-full object-cover transition-transform duration-500 group-hover/product:scale-110"
+                                crossOrigin="anonymous"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-transparent to-transparent" />
+                              {item.is_featured && (
+                                <div className="absolute top-1 right-1 bg-[var(--gold)] text-[var(--royal-red-dark)] text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+                                  مميز
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          <div className="p-3">
+                            {/* اسم المنتج - سطر واحد مع truncate */}
+                            <h3 className="font-bold text-[var(--cream)] text-sm truncate mb-1">
+                              {item.name}
+                            </h3>
+                            
+                            {/* السعر */}
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[var(--gold)] font-bold text-sm">
+                                {Number(item.price).toFixed(2)} د.ل
+                              </span>
+                            </div>
 
-                      {/* Badge للمنتجات المميزة */}
-                      {item.is_featured && (
-                        <div className="absolute top-2 right-2 bg-[var(--gold)] text-[var(--royal-red-dark)] text-xs font-bold px-2 py-1 rounded-full animate-pulse">
-                          مميز
+                            {/* زر الإضافة - مصغر */}
+                            <button
+                              onClick={async () => {
+                                const res = await fetch("/api/auth/me");
+                                const data = await res.json();
+
+                                if (data.user) {
+                                  const fullProduct = dbProducts?.find(
+                                    (p) => p.id === Number(item.id),
+                                  );
+                                  if (fullProduct) {
+                                    setSelectedProduct(fullProduct);
+                                  } else {
+                                    toast.error("لم يتم العثور على المنتج");
+                                  }
+                                } else {
+                                  const productToSave = {
+                                    id: item.id,
+                                    name: item.name,
+                                    price: item.price,
+                                    category: item.category,
+                                    description: item.description,
+                                    image_url: item.image_url,
+                                  };
+                                  localStorage.setItem("pendingProduct", JSON.stringify(productToSave));
+                                  localStorage.setItem("pendingAction", "add-to-cart");
+                                  window.location.href = `/signup?redirect=${encodeURIComponent(window.location.pathname)}`;
+                                }
+                              }}
+                              className="w-full rounded-lg border border-[var(--gold)]/30 bg-[var(--gold)]/10 py-1.5 text-[10px] font-semibold text-[var(--gold)] transition-all duration-300 hover:bg-[var(--gold)] hover:text-[var(--royal-red-dark)] flex items-center justify-center gap-1"
+                            >
+                              <Plus className="h-3 w-3" />
+                              أضف
+                            </button>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="p-6">
-                    <div className="mb-4 flex items-start justify-between">
-                      <h3 className="text-lg font-bold text-[var(--cream)] group-hover:text-[var(--gold)] transition-colors">
-                        {item.name}
-                      </h3>
-                      <span className="text-[var(--gold)] font-bold">
-                        {Number(item.price).toFixed(2)} د.ل
-                      </span>
-                    </div>
-
-                    {item.description && (
-                      <p className="mb-4 text-sm text-[var(--gold)]/60">
-                        {item.description}
-                      </p>
-                    )}
-
-                    <button
-                      onClick={async () => {
-                        // التحقق من حالة المستخدم
-                        const res = await fetch("/api/auth/me");
-                        const data = await res.json();
-
-                        if (data.user) {
-                          // مستخدم مسجل - نفتح نافذة الخيارات
-                          const fullProduct = dbProducts?.find(
-                            (p) => p.id === Number(item.id),
-                          );
-                          if (fullProduct) {
-                            setSelectedProduct(fullProduct);
-                          } else {
-                            toast.error("لم يتم العثور على المنتج");
-                          }
-                        } else {
-                          // مستخدم غير مسجل - نحفظ المنتج ونوجه للتسجيل
-                          const productToSave = {
-                            id: item.id,
-                            name: item.name,
-                            price: item.price,
-                            category: item.category,
-                            description: item.description,
-                            image_url: item.image_url,
-                          };
-
-                          localStorage.setItem(
-                            "pendingProduct",
-                            JSON.stringify(productToSave),
-                          );
-                          localStorage.setItem("pendingAction", "add-to-cart");
-
-                          // توجيه لصفحة التسجيل مع إشارة للعودة
-                          window.location.href = `/signup?redirect=${encodeURIComponent(window.location.pathname)}`;
-                        }
-                      }}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--gold)]/30 bg-[var(--gold)]/10 py-3 text-sm font-semibold text-[var(--gold)] transition-all duration-300 hover:bg-[var(--gold)] hover:text-[var(--royal-red-dark)] hover:scale-105 active:scale-95"
-                    >
-                      <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" />
-                      أضف إلى السلة
-                    </button>
-                  </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* عنصر وهمي للتباعد في النهاية */}
+                  <div className="flex-shrink-0 w-1 h-full opacity-0" />
                 </div>
-              );
-            })}
-          </div>
+
+                {/* مؤشر التمرير - نقاط بسيطة */}
+                <div className="flex justify-center gap-1 mt-2">
+                  {currentCategory?.items.map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-1 rounded-full transition-all duration-300 bg-[var(--gold)]/50"
+                      style={{ 
+                        width: i === 0 ? '16px' : '4px',
+                        opacity: i === 0 ? 1 : 0.3
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ===== عرض لسطح المكتب - شبكة كاملة (بدون تغيير) ===== */}
+            <div className="hidden sm:grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {currentCategory?.items.map((item, index) => {
+                const imgUrl = "image_url" in item ? (item as { image_url?: string }).image_url : undefined;
+                return (
+                  <div
+                    key={item.id}
+                    className="group overflow-hidden rounded-2xl border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/60 backdrop-blur-sm transition-all duration-500 hover:border-[var(--gold)]/50 hover:shadow-2xl hover:shadow-[var(--gold)]/20 hover:-translate-y-1"
+                    style={{
+                      opacity: visible ? 1 : 0,
+                      transform: visible ? "translateY(0)" : "translateY(20px)",
+                      transition: `opacity 0.5s ease ${index * 0.04 + 0.3}s, transform 0.5s ease ${index * 0.04 + 0.3}s, box-shadow 0.3s ease, border-color 0.3s ease`,
+                    }}
+                  >
+                    {/* Product Image */}
+                    {imgUrl && (
+                      <div className="relative h-44 w-full overflow-hidden">
+                        <img
+                          src={imgUrl}
+                          alt={item.name}
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          crossOrigin="anonymous"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-transparent to-transparent" />
+                        {item.is_featured && (
+                          <div className="absolute top-2 right-2 bg-[var(--gold)] text-[var(--royal-red-dark)] text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                            مميز
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="p-6">
+                      <div className="mb-4 flex items-start justify-between">
+                        <h3 className="text-lg font-bold text-[var(--cream)] group-hover:text-[var(--gold)] transition-colors">
+                          {item.name}
+                        </h3>
+                        <span className="text-[var(--gold)] font-bold">
+                          {Number(item.price).toFixed(2)} د.ل
+                        </span>
+                      </div>
+
+                      {item.description && (
+                        <p className="mb-4 text-sm text-[var(--gold)]/60">
+                          {item.description}
+                        </p>
+                      )}
+
+                      <button
+                        onClick={async () => {
+                          const res = await fetch("/api/auth/me");
+                          const data = await res.json();
+
+                          if (data.user) {
+                            const fullProduct = dbProducts?.find(
+                              (p) => p.id === Number(item.id),
+                            );
+                            if (fullProduct) {
+                              setSelectedProduct(fullProduct);
+                            } else {
+                              toast.error("لم يتم العثور على المنتج");
+                            }
+                          } else {
+                            const productToSave = {
+                              id: item.id,
+                              name: item.name,
+                              price: item.price,
+                              category: item.category,
+                              description: item.description,
+                              image_url: item.image_url,
+                            };
+                            localStorage.setItem("pendingProduct", JSON.stringify(productToSave));
+                            localStorage.setItem("pendingAction", "add-to-cart");
+                            window.location.href = `/signup?redirect=${encodeURIComponent(window.location.pathname)}`;
+                          }
+                        }}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--gold)]/30 bg-[var(--gold)]/10 py-3 text-sm font-semibold text-[var(--gold)] transition-all duration-300 hover:bg-[var(--gold)] hover:text-[var(--royal-red-dark)] hover:scale-105 active:scale-95"
+                      >
+                        <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" />
+                        أضف إلى السلة
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 

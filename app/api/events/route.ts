@@ -1,19 +1,19 @@
-import { sql } from "@/lib/db"
-import { NextResponse } from "next/server"
-import { ensureTables } from "@/lib/ensure-tables"
+import { sql } from "@/lib/db";
+import { NextResponse } from "next/server";
+import { ensureTables } from "@/lib/ensure-tables";
 
 export async function GET() {
   try {
-    await ensureTables()
+    await ensureTables();
     const events = await sql`
-      SELECT id, name, description, price, category, image_url, is_featured
+SELECT id, name, description, price, category, image_url, is_featured, icon
       FROM events
       WHERE is_available = true
       ORDER BY category, sort_order, name
-    `
-    return NextResponse.json(events)
+    `;
+    return NextResponse.json(events);
   } catch (error) {
-    console.error("Public events error:", error)
-    return NextResponse.json([], { status: 200 })
+    console.error("Public events error:", error);
+    return NextResponse.json([], { status: 200 });
   }
 }

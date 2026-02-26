@@ -41,9 +41,41 @@ export async function POST(req: Request) {
       items,
     } = body;
 
+// 1. التأكد من اكتمال البيانات
     if (!customerName || !phone || !address || !city || !paymentMethod || !items?.length) {
       return NextResponse.json(
         { error: "بيانات الطلب غير مكتملة" },
+        { status: 400 }
+      );
+    }
+
+    // 2. حماية الداتابيز من النصوص الطويلة جداً (أطول من 250 حرف أو رقم تليفون أطول من 20)
+    if (
+      customerName.length > 100 ||
+      address.length > 250 ||
+      phone.length > 20 ||
+      (secondaryPhone && secondaryPhone.length > 20)
+    ) {
+      return NextResponse.json(
+        { error: "بعض الحقول تتجاوز الحد الأقصى للطول المسموح به" },
+        { status: 400 }
+      );
+    }
+
+    // 3. فلترة الاسم: ممنوع أرقام أو رموز (عربي وإنجليزي ومسافات فقط)
+    const nameRegex = /^[a-zA-Z\u0621-\u064A\s]+$/;
+    if (!nameRegex.test(customerName.trim())) {
+      return NextResponse.json(
+        { error: "اسم المستلم يجب أن يحتوي على حروف فقط (بدون أرقام أو رموز)" },
+        { status: 400 }
+      );
+    }
+
+    // 4. فلترة العنوان: ممنوع الإيموجي أو الأكواد (حروف، أرقام، مسافات، وعلامات الترقيم فقط)
+    const addressRegex = /^[a-zA-Z\u0621-\u064A0-9\s\.,\-_/\\]+$/;
+    if (!addressRegex.test(address.trim())) {
+      return NextResponse.json(
+        { error: "العنوان يحتوي على رموز غير مسموحة" },
         { status: 400 }
       );
     }
