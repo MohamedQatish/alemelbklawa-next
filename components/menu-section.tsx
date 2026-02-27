@@ -1051,113 +1051,89 @@ export default function MenuSection() {
           </div>
         ) : (
           <>
-            {/* ===== عرض للموبايل - بطاقات صغيرة قابلة للتمرير ===== */}
-            <div className="block sm:hidden">
-              <div className="relative">
-                {/* حاوية التمرير الأفقي */}
-                <div 
-                  className="flex gap-3 overflow-x-auto pb-12 scrollbar-hide snap-x snap-mandatory"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                  {currentCategory?.items.map((item, index) => {
-                    const imgUrl = "image_url" in item ? (item as { image_url?: string }).image_url : undefined;
-                    return (
-                      <div
-                        key={item.id}
-                        className="flex-shrink-0 w-[160px] snap-start group/product"
-                      >
-                        <div
-                          className="h-full rounded-xl border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/60 backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-[var(--gold)]/40"
-                        >
-                          {/* Product Image - أصغر حجماً */}
-                          {imgUrl && (
-                            <div className="relative h-32 w-full overflow-hidden">
-                              <img
-                                src={imgUrl}
-                                alt={item.name}
-                                className="h-full w-full object-cover transition-transform duration-500 group-hover/product:scale-110"
-                                crossOrigin="anonymous"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-transparent to-transparent" />
-                              {item.is_featured && (
-                                <div className="absolute top-1 right-1 bg-[var(--gold)] text-[var(--royal-red-dark)] text-[8px] font-bold px-1.5 py-0.5 rounded-full">
-                                  مميز
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
-                          <div className="p-3">
-                            {/* اسم المنتج - سطر واحد مع truncate */}
-                            <h3 className="font-bold text-[var(--cream)] text-sm truncate mb-1">
-                              {item.name}
-                            </h3>
-                            
-                            {/* السعر */}
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-[var(--gold)] font-bold text-sm">
-                                {Number(item.price).toFixed(2)} د.ل
-                              </span>
-                            </div>
-
-                            {/* زر الإضافة - مصغر */}
-                            <button
-                              onClick={async () => {
-                                const res = await fetch("/api/auth/me");
-                                const data = await res.json();
-
-                                if (data.user) {
-                                  const fullProduct = dbProducts?.find(
-                                    (p) => p.id === Number(item.id),
-                                  );
-                                  if (fullProduct) {
-                                    setSelectedProduct(fullProduct);
-                                  } else {
-                                    toast.error("لم يتم العثور على المنتج");
-                                  }
-                                } else {
-                                  const productToSave = {
-                                    id: item.id,
-                                    name: item.name,
-                                    price: item.price,
-                                    category: item.category,
-                                    description: item.description,
-                                    image_url: item.image_url,
-                                  };
-                                  localStorage.setItem("pendingProduct", JSON.stringify(productToSave));
-                                  localStorage.setItem("pendingAction", "add-to-cart");
-                                  window.location.href = `/signup?redirect=${encodeURIComponent(window.location.pathname)}`;
-                                }
-                              }}
-                              className="w-full rounded-lg border border-[var(--gold)]/30 bg-[var(--gold)]/10 py-1.5 text-[10px] font-semibold text-[var(--gold)] transition-all duration-300 hover:bg-[var(--gold)] hover:text-[var(--royal-red-dark)] flex items-center justify-center gap-1"
-                            >
-                              <Plus className="h-3 w-3" />
-                              أضف
-                            </button>
+                    {/* ===== عرض للموبايل - شبكة بعمودين بتصميم محسن ===== */}
+            <div className="grid grid-cols-2 gap-3 sm:hidden">
+              {currentCategory?.items.map((item, index) => {
+                const imgUrl = "image_url" in item ? (item as { image_url?: string }).image_url : undefined;
+                return (
+                  <div
+                    key={item.id}
+                    className="group/product rounded-xl border border-[var(--gold)]/20 bg-[var(--royal-red-light)]/60 backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-[var(--gold)]/40"
+                  >
+                    {/* Product Image - نسبة مثالية 1:1 */}
+                    {imgUrl ? (
+                      <div className="relative aspect-square w-full overflow-hidden">
+                        <img
+                          src={imgUrl}
+                          alt={item.name}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover/product:scale-110"
+                          crossOrigin="anonymous"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-transparent to-transparent" />
+                        {item.is_featured && (
+                          <div className="absolute top-1 right-1 bg-[var(--gold)] text-[var(--royal-red-dark)] text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+                            مميز
                           </div>
-                        </div>
+                        )}
                       </div>
-                    );
-                  })}
-                  
-                  {/* عنصر وهمي للتباعد في النهاية */}
-                  <div className="flex-shrink-0 w-1 h-full opacity-0" />
-                </div>
+                    ) : (
+                      <div className="aspect-square w-full bg-[var(--royal-red-light)]/80 flex items-center justify-center">
+                        <span className="text-3xl opacity-30">🍽️</span>
+                      </div>
+                    )}
+                    
+                    {/* محتوى البطاقة - مسافات محسنة (أقصر) */}
+                    <div className="p-1.5">
+                      {/* اسم المنتج - بارتفاع مناسب */}
+                      <h3 className="font-bold text-[var(--cream)] text-xs leading-tight line-clamp-2 mb-0.5 min-h-[28px]">
+                        {item.name}
+                      </h3>
+                      
+                      {/* السعر - مدمج مع مسافة أقل */}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[var(--gold)] font-bold text-xs">
+                          {Number(item.price).toFixed(2)} <span className="text-[10px] text-[var(--gold)]/70">د.ل</span>
+                        </span>
+                      </div>
 
-                {/* مؤشر التمرير - نقاط بسيطة */}
-                <div className="flex justify-center gap-1 mt-2">
-                  {currentCategory?.items.map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-1 rounded-full transition-all duration-300 bg-[var(--gold)]/50"
-                      style={{ 
-                        width: i === 0 ? '16px' : '4px',
-                        opacity: i === 0 ? 1 : 0.3
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
+                      {/* زر الإضافة - بحجم مناسب */}
+                      <button
+                        onClick={async () => {
+                          const res = await fetch("/api/auth/me");
+                          const data = await res.json();
+
+                          if (data.user) {
+                            const fullProduct = dbProducts?.find(
+                              (p) => p.id === Number(item.id),
+                            );
+                            if (fullProduct) {
+                              setSelectedProduct(fullProduct);
+                            } else {
+                              toast.error("لم يتم العثور على المنتج");
+                            }
+                          } else {
+                            const productToSave = {
+                              id: item.id,
+                              name: item.name,
+                              price: item.price,
+                              category: item.category,
+                              description: item.description,
+                              image_url: item.image_url,
+                            };
+                            localStorage.setItem("pendingProduct", JSON.stringify(productToSave));
+                            localStorage.setItem("pendingAction", "add-to-cart");
+                            window.location.href = `/signup?redirect=${encodeURIComponent(window.location.pathname)}`;
+                          }
+                        }}
+                        className="w-full rounded-lg border border-[var(--gold)]/30 bg-[var(--gold)]/10 py-1 text-[10px] font-semibold text-[var(--gold)] transition-all duration-300 hover:bg-[var(--gold)] hover:text-[var(--royal-red-dark)] flex items-center justify-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        أضف
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* ===== عرض لسطح المكتب - شبكة كاملة (بدون تغيير) ===== */}
