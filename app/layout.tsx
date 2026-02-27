@@ -1,51 +1,100 @@
 import type { Metadata, Viewport } from "next"
 import { Amiri, Cairo, Aref_Ruqaa } from "next/font/google"
 import { Toaster } from "sonner"
+import { cookies } from "next/headers"
 
 import "./globals.css"
 
-const _amiri = Amiri({
+const amiri = Amiri({
   subsets: ["arabic", "latin"],
   weight: ["400", "700"],
   variable: "--font-amiri",
 })
 
-const _cairo = Cairo({
+const cairo = Cairo({
   subsets: ["arabic", "latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
   variable: "--font-cairo",
 })
 
-const _arefRuqaa = Aref_Ruqaa({
+const arefRuqaa = Aref_Ruqaa({
   subsets: ["arabic", "latin"],
   weight: ["400", "700"],
   variable: "--font-ruqaa",
 })
 
-export const metadata: Metadata = {
-  title: "عالم البكلاوة | Baklava World",
-  description:
-    "عالم البكلاوة - أجود أنواع الحلويات الليبية والشرقية. تجربة فاخرة من التراث الأصيل.",
+// دالة لجلب الإعدادات في السيرفر
+async function getSettings() {
+  try {
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+    const res = await fetch(`${baseUrl}/api/settings`, {
+      next: { revalidate: 60 } // إعادة التحقق كل 60 ثانية
+    })
+    if (res.ok) {
+      return await res.json()
+    }
+  } catch (error) {
+    console.error("Failed to fetch settings:", error)
+  }
+  
+  // القيم الافتراضية
+  return {
+    site_name: "عالم البقلاوة",
+    site_description: "أجود أنواع الحلويات الليبية والشرقية",
+    currency: "د.ل",
+    language: "ar",
+    primary_color: "#7B1E2F",
+    secondary_color: "#C5A55A",
+    background_color: "#1a0b0e",
+    font_family: "Cairo",
+    favicon_url: null,
+    orders_enabled: "true",
+    delivery_enabled: "true"
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSettings()
+  
+  return {
+    title: settings.site_name,
+    description: settings.site_description,
+    icons: settings.favicon_url ? {
+      icon: settings.favicon_url,
+    } : undefined,
+  }
 }
 
 export const viewport: Viewport = {
   themeColor: "#2D0610",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const settings = await getSettings()
+  
+  // تحديد الخط بناءً على الإعدادات
+  const fontClass = 
+    settings.font_family === 'Amiri' ? amiri.variable :
+    settings.font_family === 'Aref Ruqaa' ? arefRuqaa.variable :
+    cairo.variable // افتراضي Cairo
+
   return (
-    // أضفنا suppressHydrationWarning هنا لحل مشكلة تضارب كلاسات الخطوط
     <html 
-      lang="ar" 
+      lang={settings.language || "ar"} 
       dir="rtl" 
-      className={`${_amiri.variable} ${_cairo.variable} ${_arefRuqaa.variable}`}
+      className={fontClass}
       suppressHydrationWarning
+      style={{
+        backgroundColor: settings.background_color,
+      }}
     >
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" style={{
+        backgroundColor: settings.background_color,
+      }}>
         {children}
         <Toaster
           position="top-center"

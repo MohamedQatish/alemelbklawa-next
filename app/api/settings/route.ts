@@ -2,20 +2,45 @@ import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { ensureTables } from "@/lib/ensure-tables"
 
+// Cache للإعدادات العامة
+let publicSettingsCache: Record<string, string> | null = null
+let cacheTime: number | null = null
+const CACHE_DURATION = 60 * 1000 // دقيقة واحدة
+
 export async function GET() {
   try {
     await ensureTables()
-    const settings = await sql`SELECT setting_key, setting_value, setting_type, setting_group FROM site_settings ORDER BY sort_order`
-    const images = await sql`SELECT image_key, image_url, alt_text, sort_order FROM site_images WHERE is_active = true ORDER BY sort_order`
-
+    
+    // التحقق من صحة Cache
+    const now = Date.now()
+    if (publicSettingsCache && cacheTime && (now - cacheTime) < CACHE_DURATION) {
+      return NextResponse.json(publicSettingsCache)
+    }
+    
+    // جلب الإعدادات
+    const settings = await sql`
+      SELECT setting_key, setting_value 
+      FROM site_settings 
+      WHERE setting_value IS NOT NULL AND setting_value != ''
+    `
+    
+    // تحويلها إلى كائن
     const settingsMap: Record<string, string> = {}
     for (const s of settings) {
       settingsMap[s.setting_key] = s.setting_value
     }
-
-    return NextResponse.json({ settings: settingsMap, images })
+    
+    // تحديث Cache
+    publicSettingsCache = settingsMap
+    cacheTime = now
+    
+    return NextResponse.json(settingsMap)
   } catch (error) {
-    console.error("Settings fetch error:", error)
-    return NextResponse.json({ error: "خطأ في تحميل الإعدادات" }, { status: 500 })
+    console.error("Public settings error:", error)
+    return NextResponse.json({ 
+      site_name: "عالم البقلاوة",
+      currency: "د.ل",
+      language: "ar"
+    }, { status: 200 }) // إرجاع قيم افتراضية عند الخطأ
   }
 }

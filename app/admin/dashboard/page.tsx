@@ -327,6 +327,7 @@ export default function AdminDashboard() {
   const [filterLoading, setFilterLoading] = useState(false);
   const [tabKey, setTabKey] = useState(0);
   const printRef = useRef<HTMLDivElement>(null);
+  const [siteSettings, setSiteSettings] = useState<Record<string, string>>({});
 
   // Advanced Filter States
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -604,6 +605,15 @@ export default function AdminDashboard() {
   }, [fetchStats, fetchData]);
 
   useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        setSiteSettings(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!loading) {
       setFilterLoading(true);
       fetchStats().finally(() => setFilterLoading(false));
@@ -676,7 +686,8 @@ export default function AdminDashboard() {
   function printInvoice(order: Order) {
     const w = window.open("", "_blank");
     if (!w) return;
-
+    const siteName = siteSettings?.site_name || "عالم البقلاوة";
+    const siteDescription = siteSettings?.site_description || "حلويات فاخرة";
     const subtotal = order.items.reduce(
       (sum, item) => sum + item.quantity * Number(item.unit_price),
       0,
@@ -906,8 +917,8 @@ export default function AdminDashboard() {
 
   <!-- Header -->
   <div class="inv-header">
-    <div class="brand-name">عَالَمُ الْبَكْلَاوَة</div>
-    <div class="brand-sub">حلويات فاخرة</div>
+   <div class="brand-name">{siteName}</div>
+<div class="brand-sub">{siteDescription}</div>
     <div class="inv-number">
       <span></span>
       <b>فاتورة رقم #${order.id}</b>
@@ -972,7 +983,7 @@ export default function AdminDashboard() {
   <div class="inv-footer">
     <div class="footer-gold-line"></div>
     <div class="footer-thanks">شكراً لاختياركم عَالَمُ الْبَكْلَاوَة</div>
-    <div class="footer-note">ALAM ALBAKLAWA - PREMIUM SWEETS</div>
+<div class="footer-note">{siteName.toUpperCase()} - {siteDescription}</div>
   </div>
 
 </div>
@@ -1949,16 +1960,19 @@ export default function AdminDashboard() {
                     period="daily"
                     label="طباعة مبيعات اليوم"
                     icon={<TrendingUp className="h-5 w-5" />}
+                    siteName={siteSettings?.site_name || "عالم البقلاوة"}
                   />
                   <PrintSalesButton
                     period="monthly"
                     label="طباعة مبيعات الشهر"
                     icon={<BarChart3 className="h-5 w-5" />}
+                    siteName={siteSettings?.site_name || "عالم البقلاوة"}
                   />
                   <PrintSalesButton
                     period="yearly"
                     label="طباعة مبيعات السنة"
                     icon={<Calendar className="h-5 w-5" />}
+                    siteName={siteSettings?.site_name || "عالم البقلاوة"}
                   />
                 </div>
               </section>
@@ -2200,18 +2214,22 @@ export default function AdminDashboard() {
                                 </h3>
                                 {getStatusBadge(order.status)}
                                 {/* عرض العداد التنازلي للطلبات قيد الانتظار */}
-{/* عرض العداد التنازلي للطلبات قيد الانتظار */}
-{order.status === 'pending' && (order.seconds_remaining ?? 0) > 0 && (
-  <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-    <Clock className="h-4 w-4 text-amber-400" />
-    <span className="text-xs text-amber-400">
-      متبقي للعميل: {formatTime(order.seconds_remaining ?? 0)}
-    </span>
-    <span className="text-xs text-amber-400/70 mr-auto">
-      (يمكن للعميل إلغاء الطلب)
-    </span>
-  </div>
-)}
+                                {/* عرض العداد التنازلي للطلبات قيد الانتظار */}
+                                {order.status === "pending" &&
+                                  (order.seconds_remaining ?? 0) > 0 && (
+                                    <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                      <Clock className="h-4 w-4 text-amber-400" />
+                                      <span className="text-xs text-amber-400">
+                                        متبقي للعميل:{" "}
+                                        {formatTime(
+                                          order.seconds_remaining ?? 0,
+                                        )}
+                                      </span>
+                                      <span className="text-xs text-amber-400/70 mr-auto">
+                                        (يمكن للعميل إلغاء الطلب)
+                                      </span>
+                                    </div>
+                                  )}
                               </div>
                               <p
                                 className="mt-1 text-sm"
@@ -2916,7 +2934,7 @@ const formatTime = (seconds: number) => {
   const totalSeconds = Math.floor(Math.max(0, seconds));
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 };
 /* ============ Print Sales Report Button ============ */
 function PrintSalesButton({
@@ -2927,6 +2945,7 @@ function PrintSalesButton({
   period: string;
   label: string;
   icon: React.ReactNode;
+  siteName: string;
 }) {
   const [loading, setLoading] = useState(false);
   const periodLabels: Record<string, string> = {
@@ -3028,8 +3047,7 @@ function PrintSalesButton({
             : ""
         }
 
-        <div class="footer">تم إنشاء هذا التقرير تلقائياً من لوحة التحكم</div>
-        </body></html>`);
+<div class="footer">تم إنشاء هذا التقرير تلقائياً من {siteName}</div>        </body></html>`);
       printWindow.document.close();
       printWindow.print();
     } catch {
