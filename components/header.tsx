@@ -39,7 +39,6 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
   const [user, setUser] = useState<UserData | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [siteName, setSiteName] = useState("عالم البقلاوة"); // 👈 أضف هذا
   const cartCount = useSyncExternalStore(
     subscribeToCart,
     getCartCount,
@@ -58,16 +57,6 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
       .then((res) => res.json())
       .then((data) => {
         if (data.user) setUser(data.user);
-      })
-      .catch(() => {});
-  }, []);
-
-  // 👈 أضف هذا useEffect لجلب اسم الموقع
-  useEffect(() => {
-    fetch("/api/settings")
-      .then(res => res.json())
-      .then(data => {
-        if (data.site_name) setSiteName(data.site_name);
       })
       .catch(() => {});
   }, []);
@@ -118,13 +107,15 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
       }}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-        {/* Logo - الآن يستخدم siteName من الإعدادات */}
+        {/* Logo */}
         <button
           onClick={() => scrollTo("home")}
           className="brand-title-sm text-xl sm:text-2xl"
           suppressHydrationWarning
         >
-          {siteName}
+          {
+            "\u0639\u064E\u0627\u0644\u064E\u0645\u064F \u0627\u0644\u0652\u0628\u064E\u0643\u0652\u0644\u064E\u0627\u0648\u064E\u0629"
+          }
         </button>
 
         {/* Desktop Nav */}
