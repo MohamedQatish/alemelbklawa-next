@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getCartCount, getServerCount, subscribeToCart } from "@/lib/cart";
+import { getCartCount, getServerCount, subscribeToCart, clearCart } from "@/lib/cart";
 
 const navItems = [
   { id: "home", label: "الرئيسية" },
@@ -72,7 +72,12 @@ export default function Header({ onCartOpen }: { onCartOpen: () => void }) {
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);
     try {
+      // 1. مسح السلة من المتصفح فوراً عشان العداد يصفر قدام العميل
+      clearCart(); 
+
+      // 2. إرسال طلب الخروج للسيرفر
       await fetch("/api/auth/logout", { method: "POST" });
+       
       setUser(null);
       setUserMenuOpen(false);
       setMobileOpen(false);
