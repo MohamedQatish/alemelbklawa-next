@@ -333,6 +333,7 @@ export default function AdminDashboard() {
   const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [availableBranches, setAvailableBranches] = useState<
     Array<{ id: number; name: string }>
+    
   >([]);
   const [availableProducts, setAvailableProducts] = useState<
     Array<{ id: number; name: string }>
