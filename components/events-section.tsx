@@ -291,6 +291,40 @@ export default function EventsSection() {
     });
   };
 
+  // ========== دالة التحقق من المستخدم قبل إضافة المناسبة ==========
+  const handleEventSelection = async (event: DBEvent | null, categoryId: string) => {
+    if (!event) return;
+
+    try {
+      // التحقق من حالة المستخدم
+      const res = await fetch("/api/auth/me");
+      const data = await res.json();
+
+      if (data.user) {
+        // مستخدم مسجل → فتح نافذة الاختيار مباشرة
+        setModalEvent(event);
+        setModalCategoryId(categoryId);
+      } else {
+        // زائر → حفظ بيانات المناسبة في localStorage والتوجيه للتسجيل
+        const eventToSave = {
+          id: event.id,
+          name: event.name,
+          price: event.price,
+          category: event.category,
+          description: event.description,
+          image_url: event.image_url,
+          categoryId: categoryId,
+        };
+        localStorage.setItem("pendingEvent", JSON.stringify(eventToSave));
+        localStorage.setItem("pendingAction", "add-event");
+        window.location.href = `/signup?redirect=${encodeURIComponent(window.location.pathname)}`;
+      }
+    } catch (error) {
+      console.error("Error checking auth:", error);
+      toast.error("حدث خطأ. الرجاء المحاولة مرة أخرى");
+    }
+  };
+
   const confirmSelection = () => {
     if (!modalEvent || !modalCategoryId || !calculatedResult) return;
 
@@ -461,10 +495,7 @@ export default function EventsSection() {
                       return (
                         <button
                           key={item.id}
-                          onClick={() => {
-                            setModalEvent(item.fullEvent || null);
-                            setModalCategoryId(cat.id);
-                          }}
+                          onClick={() => handleEventSelection(item.fullEvent || null, cat.id)}
                           disabled={isSelected}
                           className={`group/item relative rounded-lg overflow-hidden transition-all duration-200 ${
                             isSelected
@@ -700,27 +731,28 @@ export default function EventsSection() {
                 </div>
               </div>
 
-             {/* Total Price */}
-<div className="mb-4 space-y-2">
-  <div className="flex justify-between items-center">
-    <span className="text-sm text-[var(--gold)]/70">سعر القطعة الواحدة:</span>
-    <span className="text-base font-bold text-[var(--gold)]">
-      {(calculatedResult?.price || modalEvent.price).toFixed(2)} د.ل
-    </span>
-  </div>
-  
-  <div className="flex justify-between items-center pt-2 border-t border-[var(--gold)]/20">
-    <span className="text-base font-bold text-[var(--gold)]">الإجمالي للكمية:</span>
-    <span className="text-xl font-bold text-[var(--gold)]" style={{ color: 'var(--gold)' }}>
-      {((calculatedResult?.price || modalEvent.price) * quantity).toFixed(2)} د.ل
-    </span>
-  </div>
-  
-  {/* تفاصيل الحساب */}
-  <div className="text-xs text-[var(--gold)]/40 text-left">
-    {quantity} × {(calculatedResult?.price || modalEvent.price).toFixed(2)} د.ل
-  </div>
-</div>
+              {/* Total Price */}
+              <div className="mb-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[var(--gold)]/70">سعر القطعة الواحدة:</span>
+                  <span className="text-base font-bold text-[var(--gold)]">
+                    {(calculatedResult?.price || modalEvent.price).toFixed(2)} د.ل
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center pt-2 border-t border-[var(--gold)]/20">
+                  <span className="text-base font-bold text-[var(--gold)]">الإجمالي للكمية:</span>
+                  <span className="text-xl font-bold text-[var(--gold)]" style={{ color: 'var(--gold)' }}>
+                    {((calculatedResult?.price || modalEvent.price) * quantity).toFixed(2)} د.ل
+                  </span>
+                </div>
+                
+                {/* تفاصيل الحساب */}
+                <div className="text-xs text-[var(--gold)]/40 text-left">
+                  {quantity} × {(calculatedResult?.price || modalEvent.price).toFixed(2)} د.ل
+                </div>
+              </div>
+
               <button
                 onClick={confirmSelection}
                 className="flex w-full items-center justify-center gap-3 rounded-xl border border-[var(--gold)]/30 bg-[var(--gold)] py-3.5 text-sm font-bold text-[var(--royal-red-dark)] transition-all duration-300 hover:shadow-xl hover:scale-105"

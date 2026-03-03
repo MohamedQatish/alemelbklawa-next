@@ -160,9 +160,17 @@ interface Stats {
   monthlySales: number;
   monthlyProducts?: number;
   monthlyDelivery?: number;
+  allOrders: number;
   totalOrders: number;
   pendingOrders: number;
   cancelledOrders: number;
+  ordersByStatus: {
+    pending: number;
+    confirmed: number;
+    preparing: number;
+    delivered: number;
+    cancelled: number;
+  };
   totalCustomers: number;
   hasFilter: boolean;
   filteredSales: number;
@@ -333,7 +341,6 @@ export default function AdminDashboard() {
   const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [availableBranches, setAvailableBranches] = useState<
     Array<{ id: number; name: string }>
-    
   >([]);
   const [availableProducts, setAvailableProducts] = useState<
     Array<{ id: number; name: string }>
@@ -1541,10 +1548,10 @@ export default function AdminDashboard() {
                           نسبة الإنجاز
                         </p>
                         <p className="text-xl font-bold">
-                          {stats.totalOrders > 0
+                          {stats.allOrders > 0
                             ? (
-                                ((stats.totalOrders - stats.cancelledOrders) /
-                                  stats.totalOrders) *
+                                ((stats.allOrders - stats.cancelledOrders) /
+                                  stats.allOrders) *
                                 100
                               ).toFixed(1)
                             : 0}
@@ -1729,7 +1736,10 @@ export default function AdminDashboard() {
                           data={[
                             {
                               name: "مكتملة",
-                              value: stats.totalOrders - stats.cancelledOrders,
+                              value:
+                                stats.allOrders -
+                                stats.pendingOrders -
+                                stats.cancelledOrders,
                               color: CHART_COLORS.success,
                             },
                             {
@@ -1751,7 +1761,9 @@ export default function AdminDashboard() {
                           dataKey="value"
                         >
                           {[
-                            stats.totalOrders - stats.cancelledOrders,
+                            stats.allOrders -
+                              stats.pendingOrders -
+                              stats.cancelledOrders,
                             stats.pendingOrders,
                             stats.cancelledOrders,
                           ].map((entry, index) => (
@@ -1777,7 +1789,9 @@ export default function AdminDashboard() {
                           className="font-bold text-sm"
                           style={{ color: CHART_COLORS.success }}
                         >
-                          {stats.totalOrders - stats.cancelledOrders}
+                          {stats.allOrders -
+                            stats.pendingOrders -
+                            stats.cancelledOrders}
                         </p>
                       </div>
                       <div className="text-center">
@@ -2201,18 +2215,22 @@ export default function AdminDashboard() {
                                 </h3>
                                 {getStatusBadge(order.status)}
                                 {/* عرض العداد التنازلي للطلبات قيد الانتظار */}
-{/* عرض العداد التنازلي للطلبات قيد الانتظار */}
-{order.status === 'pending' && (order.seconds_remaining ?? 0) > 0 && (
-  <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-    <Clock className="h-4 w-4 text-amber-400" />
-    <span className="text-xs text-amber-400">
-      متبقي للعميل: {formatTime(order.seconds_remaining ?? 0)}
-    </span>
-    <span className="text-xs text-amber-400/70 mr-auto">
-      (يمكن للعميل إلغاء الطلب)
-    </span>
-  </div>
-)}
+                                {/* عرض العداد التنازلي للطلبات قيد الانتظار */}
+                                {order.status === "pending" &&
+                                  (order.seconds_remaining ?? 0) > 0 && (
+                                    <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                      <Clock className="h-4 w-4 text-amber-400" />
+                                      <span className="text-xs text-amber-400">
+                                        متبقي للعميل:{" "}
+                                        {formatTime(
+                                          order.seconds_remaining ?? 0,
+                                        )}
+                                      </span>
+                                      <span className="text-xs text-amber-400/70 mr-auto">
+                                        (يمكن للعميل إلغاء الطلب)
+                                      </span>
+                                    </div>
+                                  )}
                               </div>
                               <p
                                 className="mt-1 text-sm"
@@ -2917,7 +2935,7 @@ const formatTime = (seconds: number) => {
   const totalSeconds = Math.floor(Math.max(0, seconds));
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 };
 /* ============ Print Sales Report Button ============ */
 function PrintSalesButton({
@@ -2942,7 +2960,8 @@ function PrintSalesButton({
       const res = await fetch(`/api/admin/sales-report?period=${period}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
-      const s = data.summary || {};
+    const s = data.summary || {};
+console.log(`📊 تقرير ${period}:`, s); 
       const paymentLabels = {
         card: "بطاقة بنكية",
         cash: "الدفع عند الاستلام",

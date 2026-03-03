@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Save, Loader2, Globe, Phone, Image as ImageIcon, FileText, RefreshCw } from "lucide-react"
-
+import { Save, Loader2, Globe, Phone, Image as ImageIcon, FileText, RefreshCw, CreditCard } from "lucide-react"
 interface SiteSetting {
   id: number
   setting_key: string
@@ -29,6 +28,7 @@ const GROUP_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
   contact: { label: "معلومات التواصل", icon: <Phone className="h-4 w-4" /> },
   social: { label: "وسائل التواصل", icon: <Globe className="h-4 w-4" /> },
   about: { label: "من نحن", icon: <FileText className="h-4 w-4" /> },
+  payment: { label: "بوابات الدفع", icon: <CreditCard className="h-4 w-4" /> }, 
 }
 
 export default function SettingsManager() {
