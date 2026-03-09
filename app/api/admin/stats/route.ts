@@ -27,9 +27,6 @@ export async function GET(request: Request) {
     );
 
     // ===== Build date filter conditions =====
-    // When filter is active, ALL metrics reflect the filtered period
-    // When no filter, use normal real-time logic
-
     let filteredSales = 0;
     let filteredLabel = "";
     let filteredOrders = 0;
@@ -144,7 +141,7 @@ export async function GET(request: Request) {
       filteredLabel = `مبيعات سنة ${filterYear}`;
     }
 
-    // ===== Hourly breakdown (only when a specific day is selected) =====
+    // ===== Hourly breakdown =====
     let hourlySales: { hour: number; total: number; count: number }[] = [];
     if (filterDay && filterMonth && filterYear) {
       const dateStr = `${filterYear}-${filterMonth.padStart(2, "0")}-${filterDay.padStart(2, "0")}`;
@@ -165,8 +162,7 @@ export async function GET(request: Request) {
       }));
     }
 
-    // ===== 👇 هنا مكان الإضافة الجديدة 👇 =====
-    // إذا لم يكن هناك فلتر لليوم، نعرض مبيعات اليوم الحالي
+    // مبيعات اليوم الحالي
     if (!filterDay && !filterMonth && !filterYear && !startDate && !endDate) {
       const todayHourlyRes = await sql`
         SELECT EXTRACT(HOUR FROM created_at)::int as hour,
@@ -184,10 +180,9 @@ export async function GET(request: Request) {
         count: Number(r.count),
       }));
     }
-    // ===== 👆 هنا انتهت الإضافة 👆 =====
 
     // ===== Default (unfiltered) Statistics =====
-    // مبيعات اليوم (مع تفصيل)
+    // مبيعات اليوم
     const todaySales = await sql`
   SELECT 
     COALESCE(SUM(total_amount), 0) as total,
@@ -196,7 +191,7 @@ export async function GET(request: Request) {
   FROM orders WHERE DATE(created_at) = CURRENT_DATE AND status = ANY(${completedStatuses})
 `;
 
-    // مبيعات الشهر (مع تفصيل)
+    // مبيعات الشهر
     const monthlySales = await sql`
   SELECT 
     COALESCE(SUM(total_amount), 0) as total,
@@ -204,7 +199,8 @@ export async function GET(request: Request) {
     COALESCE(SUM(delivery_fee), 0) as delivery_total
   FROM orders WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE) AND status = ANY(${completedStatuses})
 `;
-    // إجمالي جميع الطلبات (للعرض فقط)
+
+    // إجمالي جميع الطلبات
     const allOrdersCount = await sql`
   SELECT COUNT(*) as count FROM orders
 `;
@@ -244,17 +240,39 @@ export async function GET(request: Request) {
     const totalDeliveryFees = await sql`
   SELECT COALESCE(SUM(delivery_fee), 0) as total FROM orders WHERE status = ANY(${completedStatuses})
 `;
-    const topCity = await sql`
-      SELECT city, COUNT(*) as count FROM orders WHERE status = ANY(${completedStatuses})
-      GROUP BY city ORDER BY count DESC LIMIT 1
+
+    // ✅ تعديل 1: جلب جميع المدن مع عدد الطلبات لكل منها
+    const cityDistribution = await sql`
+      SELECT city, COUNT(*) as count 
+      FROM orders 
+      WHERE status = ANY(${completedStatuses})
+      GROUP BY city 
+      ORDER BY count DESC
     `;
+
+    // ✅ تعديل 2: أفضل مدينة (أعلى)
+    const topCity = cityDistribution.length > 0 ? cityDistribution[0] : null;
+
+    // أفضل منتج
     const topProduct = await sql`
-      SELECT oi.product_name, SUM(oi.quantity) as total_qty
-      FROM order_items oi
-      JOIN orders o ON o.id = oi.order_id
-      WHERE o.status = ANY(${completedStatuses})
-      GROUP BY oi.product_name ORDER BY total_qty DESC LIMIT 1
-    `;
+  SELECT 
+    oi.product_name, 
+    SUM(oi.quantity) as total_qty,
+    SUM(oi.quantity * oi.unit_price) as total_revenue
+  FROM order_items oi
+  JOIN orders o ON o.id = oi.order_id
+  WHERE o.status = ANY(${completedStatuses})
+  GROUP BY oi.product_name 
+  ORDER BY total_qty DESC, total_revenue DESC
+  LIMIT 1
+`;
+
+    // حساب نسبة الإنجاز
+    const allOrders = Number(allOrdersCount[0].count);
+    const cancelled = Number(cancelledOrders[0].count);
+    const completionRate = allOrders > 0 
+      ? ((allOrders - cancelled) / allOrders) * 100 
+      : 0;
 
     return NextResponse.json({
       // Real-time (unfiltered) stats
@@ -264,16 +282,16 @@ export async function GET(request: Request) {
       monthlySales: Number(monthlySales[0].total),
       monthlyProducts: Number(monthlySales[0].products_total),
       monthlyDelivery: Number(monthlySales[0].delivery_total),
-      allOrders: Number(allOrdersCount[0].count),
+      allOrders: allOrders,
       totalOrders: Number(totalOrders[0].count),
       pendingOrders: Number(pendingOrders[0].count),
-      cancelledOrders: Number(cancelledOrders[0].count),
+      cancelledOrders: cancelled,
       ordersByStatus: {
         pending: Number(pendingOrders[0].count),
         confirmed: Number(confirmedOrders[0].count),
         preparing: Number(preparingOrders[0].count),
         delivered: Number(deliveredOrders[0].count),
-        cancelled: Number(cancelledOrders[0].count),
+        cancelled: cancelled,
       },
       totalCustomers: Number(totalCustomers[0].count),
       // Filtered data
@@ -289,10 +307,18 @@ export async function GET(request: Request) {
         totalRevenue: Number(totalRevenue[0].total),
         avgOrderValue: Number(avgOrder[0].avg),
         totalDeliveryFees: Number(totalDeliveryFees[0].total),
-        topCity:
-          topCity.length > 0
-            ? { name: topCity[0].city, count: Number(topCity[0].count) }
-            : null,
+        // ✅ توزيع المدن كامل
+        cityDistribution: cityDistribution.map(city => ({
+          name: city.city,
+          count: Number(city.count)
+        })),
+        // ✅ أفضل مدينة (للعرض)
+        topCity: topCity ? { 
+          name: topCity.city, 
+          count: Number(topCity.count) 
+        } : null,
+        // ✅ نسبة الإنجاز المحسوبة بشكل صحيح
+        completionRate: completionRate,
         topProduct:
           topProduct.length > 0
             ? {

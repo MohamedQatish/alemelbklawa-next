@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { calculateProductPrice } from "@/lib/pricing";
 import { getCurrentUser } from "@/lib/user-auth";
+
 // تعريف نوع لعناصر الطلب
 interface OrderItem {
   productId: number;
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
       items,
     } = body;
 
-// 1. التأكد من اكتمال البيانات
+    // 1. التأكد من اكتمال البيانات
     if (!customerName || !phone || !address || !city || !paymentMethod || !items?.length) {
       return NextResponse.json(
         { error: "بيانات الطلب غير مكتملة" },
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. حماية الداتابيز من النصوص الطويلة جداً (أطول من 250 حرف أو رقم تليفون أطول من 20)
+    // 2. حماية الداتابيز من النصوص الطويلة جداً
     if (
       customerName.length > 100 ||
       address.length > 250 ||
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. فلترة الاسم: ممنوع أرقام أو رموز (عربي وإنجليزي ومسافات فقط)
+    // 3. فلترة الاسم
     const nameRegex = /^[a-zA-Z\u0621-\u064A\s]+$/;
     if (!nameRegex.test(customerName.trim())) {
       return NextResponse.json(
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. فلترة العنوان: ممنوع الإيموجي أو الأكواد (حروف، أرقام، مسافات، وعلامات الترقيم فقط)
+    // 4. فلترة العنوان
     const addressRegex = /^[a-zA-Z\u0621-\u064A0-9\s\.,\-_/\\]+$/;
     if (!addressRegex.test(address.trim())) {
       return NextResponse.json(
@@ -80,12 +81,52 @@ export async function POST(req: Request) {
       );
     }
 
+    // ========== DEBUG: عرض البيانات المستقبلة ==========
+    console.log("\n📦 ===== بداية معالجة الطلب في API =====");
+    console.log("📋 البيانات المستقبلة:", {
+      customerName,
+      phone,
+      address,
+      city,
+      deliveryFee,
+      paymentMethod,
+      itemsCount: items?.length
+    });
+    
+    console.log("📋 items المستقبلة:", JSON.stringify(items, null, 2));
+    // ==================================================
+
     // حساب السعر النهائي لكل عنصر
     let totalAmount = 0;
     const orderItemsData: PreparedOrderItem[] = [];
 
     for (const item of items as OrderItem[]) {
       const selectedOptions = item.selectedOptions || [];
+      
+      // ========== DEBUG: عرض تفاصيل كل عنصر ==========
+      console.log(`\n📦 معالجة عنصر - ID: ${item.productId}`);
+      console.log(`📋 اسم المنتج: ${item.product_name || "غير معروف"}`);
+      console.log(`📋 الكمية: ${item.quantity}`);
+      console.log(`📋 الخيارات المرسلة (raw):`, selectedOptions);
+      
+      // التحقق من وجود optionId
+      if (selectedOptions.length > 0) {
+        console.log(`📋 تفاصيل الخيارات:`);
+        selectedOptions.forEach((opt, idx) => {
+          console.log(`   option ${idx + 1}:`, {
+            optionId: opt.optionId,
+            name: opt.name,
+            price: opt.price
+          });
+          if (!opt.optionId) {
+            console.error(`   ❌ optionId مفقود في هذا الخيار!`);
+          }
+        });
+      } else {
+        console.log(`⚠️  لا توجد خيارات لهذا العنصر`);
+      }
+      // =============================================
+
       const pricing = await calculateProductPrice(
         item.productId,
         selectedOptions
@@ -107,12 +148,16 @@ export async function POST(req: Request) {
     }
 
     totalAmount += deliveryFee;
+    
+    // ========== DEBUG: عرض الإجمالي ==========
+    console.log("\n💰 إجمالي الطلب:", totalAmount);
+    console.log("📋 orderItemsData النهائي:", JSON.stringify(orderItemsData, null, 2));
+    console.log("=====================================\n");
+    // =========================================
 
-    // استخدام sql.begin للمعاملة - بدون تمرير sql كمعامل
+    // استخدام sql.begin للمعاملة
     const result = await sql.begin(async () => {
-      // 1. إنشاء الطلب
-         // 1. إنشاء الطلب
-         const currentUser = await getCurrentUser();
+      const currentUser = await getCurrentUser();
 
       const [order] = await sql`
         INSERT INTO orders (
@@ -141,13 +186,13 @@ export async function POST(req: Request) {
           ${notes || null},
           'pending',
           NOW(),
-          NOW() + INTERVAL '10 minutes'
-          , ${currentUser?.id || null}
+          NOW() + INTERVAL '10 minutes',
+          ${currentUser?.id || null}
         )
         RETURNING id
       `;
 
-      // 2. إضافة عناصر الطلب
+      // إضافة عناصر الطلب
       for (const itemData of orderItemsData) {
         await sql`
           INSERT INTO order_items (
@@ -174,6 +219,7 @@ export async function POST(req: Request) {
         `;
       }
 
+      console.log(`✅ تم إنشاء الطلب رقم: ${order.id}`);
       return order;
     });
 
@@ -184,7 +230,8 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error("Order creation error:", error);
+    console.error("\n❌ خطأ في إنشاء الطلب:");
+    console.error(error);
     return NextResponse.json(
       { error: error?.message || "حدث خطأ في إنشاء الطلب" },
       { status: 500 }
@@ -225,7 +272,6 @@ export async function GET(req: Request) {
 
     // بناء شروط البحث
     if (currentUser) {
-      // مستخدم مسجل: نبحث بـ user_id أولاً، ثم برقم الهاتف
       const localPhone = currentUser.phone.replace('+218', '');
       query = sql`
         ${query}
@@ -236,7 +282,6 @@ export async function GET(req: Request) {
            OR o.secondary_phone = ${localPhone}
       `;
     } else if (phone) {
-      // زائر: نبحث برقم الهاتف فقط
       const localPhone = phone.replace('+218', '');
       query = sql`
         ${query}

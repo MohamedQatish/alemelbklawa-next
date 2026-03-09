@@ -151,6 +151,7 @@ interface StoreStats {
   activeBranches: number;
   customerSatisfaction?: number;
   repeatCustomerRate?: number;
+  cityDistribution?: Array<{ name: string; count: number }>;
 }
 
 interface Stats {
@@ -605,7 +606,16 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   }, [router, fetchFilterMetadata]);
+  useEffect(() => {
+    if (!loading && activeTab === "orders") {
+      const interval = setInterval(() => {
+        console.log("🔄 تحديث تلقائي للطلبات...");
+        fetchData();
+      }, 30000); // 30 ثانية
 
+      return () => clearInterval(interval);
+    }
+  }, [loading, activeTab, fetchData]);
   useEffect(() => {
     fetchStats();
     fetchData();
@@ -1879,45 +1889,117 @@ export default function AdminDashboard() {
                       />
                       توزيع الطلبات حسب المدينة
                     </h3>
-                    {stats.storeStats.topCity ? (
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                          <div className="flex justify-between mb-2">
-                            <span className="text-sm">
-                              {stats.storeStats.topCity.name}
-                            </span>
-                            <span className="text-sm font-bold">
-                              {stats.storeStats.topCity.count} طلب
-                            </span>
-                          </div>
-                          <div
-                            className="w-full h-2 rounded-full overflow-hidden"
-                            style={{ background: T.border }}
+                    {stats.storeStats.cityDistribution &&
+                    stats.storeStats.cityDistribution.length > 0 ? (
+                      <div className="space-y-4">
+                        {/* عنوان القسم */}
+                        <div className="flex items-center justify-between">
+                          <h4
+                            className="text-sm font-semibold"
+                            style={{ color: T.accentLight }}
                           >
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: "70%",
-                                background: `linear-gradient(90deg, ${CHART_COLORS.primary}, ${CHART_COLORS.gold})`,
-                              }}
-                            />
-                          </div>
-                          <p
-                            className="text-xs mt-3"
+                            توزيع الطلبات حسب المدينة
+                          </h4>
+                          <span
+                            className="text-xs"
                             style={{ color: T.textDim }}
                           >
-                            أعلى مدينة في الطلبات
-                          </p>
+                            إجمالي:{" "}
+                            {stats.storeStats.cityDistribution.reduce(
+                              (sum, city) => sum + city.count,
+                              0,
+                            )}{" "}
+                            طلب
+                          </span>
                         </div>
-                        <div
-                          className="p-4 rounded-xl"
-                          style={{ background: `${CHART_COLORS.info}15` }}
-                        >
-                          <Building2
-                            className="h-8 w-8"
-                            style={{ color: CHART_COLORS.info }}
-                          />
+
+                        {/* قائمة المدن مع رسم بياني شريطي */}
+                        <div className="space-y-3">
+                          {stats.storeStats.cityDistribution.map(
+                            (city, index) => {
+                              // حساب النسبة المئوية (أعلى مدينة = 100%)
+                              const maxCount = stats.storeStats.cityDistribution
+                                ? Math.max(
+                                    ...stats.storeStats.cityDistribution.map(
+                                      (c) => c.count,
+                                    ),
+                                  )
+                                : 0;
+                              const percentage = (city.count / maxCount) * 100;
+
+                              return (
+                                <div key={city.name} className="space-y-1">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="w-2 h-2 rounded-full"
+                                        style={{
+                                          background:
+                                            CHART_COLORS.gradient[
+                                              index %
+                                                CHART_COLORS.gradient.length
+                                            ],
+                                        }}
+                                      />
+                                      <span style={{ color: T.text }}>
+                                        {city.name}
+                                      </span>
+                                    </div>
+                                    <span
+                                      className="font-bold"
+                                      style={{ color: T.accentLight }}
+                                    >
+                                      {city.count} طلب
+                                    </span>
+                                  </div>
+                                  <div className="w-full h-2 bg-[var(--gold)]/10 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full transition-all duration-500"
+                                      style={{
+                                        width: `${percentage}%`,
+                                        background: `linear-gradient(90deg, ${CHART_COLORS.gradient[index % CHART_COLORS.gradient.length]}, ${CHART_COLORS.gold})`,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
                         </div>
+
+                        {/* عرض أعلى مدينة بشكل مميز */}
+                        {stats.storeStats.topCity && (
+                          <div className="mt-4 pt-4 border-t border-[var(--gold)]/20">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Building2
+                                  className="h-4 w-4"
+                                  style={{ color: CHART_COLORS.gold }}
+                                />
+                                <span
+                                  className="text-xs"
+                                  style={{ color: T.textDim }}
+                                >
+                                  أعلى مدينة:
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="text-sm font-bold"
+                                  style={{ color: T.accentLight }}
+                                >
+                                  {stats.storeStats.topCity.name}
+                                </span>
+                                <span
+                                  className="text-xs px-2 py-1 rounded-full bg-[var(--gold)]/10"
+                                  style={{ color: T.accentLight }}
+                                >
+                                  {stats.storeStats.topCity.count} طلب
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p
@@ -1981,492 +2063,653 @@ export default function AdminDashboard() {
           )}
 
           {/* ========== ORDERS TAB ========== */}
-          {activeTab === "orders" &&
-            (() => {
-              console.log("📦 جميع الطلبات:", orders);
-              if (orders.length > 0) {
-                console.log("📋 الطلب الأول:", orders[0]);
-                console.log("🛒 عناصر الطلب الأول:", orders[0].items);
-                if (orders[0].items?.length > 0) {
-                  console.log("🔍 أول عنصر:", orders[0].items[0]);
-                  console.log(
-                    "✨ الخيارات:",
-                    orders[0].items[0].selected_options,
-                  );
-                }
-              }
+          {activeTab === "orders" && (
+            <div className="flex flex-col gap-4">
+              {/* Date controls */}
+              <div className="admin-panel animate-slide-up-fade">
+                <div className="relative z-10 flex flex-wrap items-center gap-3 p-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar
+                      className="h-4 w-4"
+                      style={{ color: T.accentLight }}
+                    />
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: T.textMuted }}
+                    >
+                      ترتيب حسب التاريخ:
+                    </span>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setOrderSortDir(orderSortDir === "desc" ? "asc" : "desc")
+                    }
+                    className="admin-btn-glow flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors"
+                    style={{ borderColor: T.border, color: T.accentLight }}
+                  >
+                    {orderSortDir === "desc"
+                      ? "الأحدث أولاً ↓"
+                      : "الأقدم أولاً ↑"}
+                  </button>
+                  <input
+                    type="date"
+                    value={orderDateFilter}
+                    onChange={(e) => setOrderDateFilter(e.target.value)}
+                    className="rounded-lg border px-3 py-1.5 text-xs outline-none"
+                    style={{
+                      borderColor: T.border,
+                      background: T.surface,
+                      color: T.text,
+                    }}
+                  />
+                  {orderDateFilter && (
+                    <button
+                      onClick={() => setOrderDateFilter("")}
+                      className="admin-btn-glow flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition-colors"
+                      style={{ borderColor: T.border, color: T.textMuted }}
+                    >
+                      <RotateCcw className="h-3 w-3" /> مسح الفلتر
+                    </button>
+                  )}
+                  <span
+                    className="mr-auto text-xs"
+                    style={{ color: T.textDim }}
+                  >
+                    {(() => {
+                      // تطبيق الفلاتر المتقدمة على الطلبات
+                      const filteredOrders = orders
+                        .filter((order) => {
+                          // فلترة حسب النطاق الزمني (من فلتر التاريخ البسيط)
+                          if (orderDateFilter) {
+                            const orderDate = new Date(order.created_at)
+                              .toISOString()
+                              .split("T")[0];
+                            if (orderDate !== orderDateFilter) {
+                              return false;
+                            }
+                          }
 
-              // تطبيق الفلاتر المتقدمة على الطلبات
-              const filteredOrders = orders
-                .filter((order) => {
-                  // فلترة حسب النطاق الزمني
-                  if (
-                    advancedFilters.dateRange.start &&
-                    advancedFilters.dateRange.end
-                  ) {
-                    const orderDate = new Date(order.created_at)
-                      .toISOString()
-                      .split("T")[0];
+                          // فلترة حسب النطاق الزمني (من الفلاتر المتقدمة)
+                          if (
+                            advancedFilters.dateRange.start &&
+                            advancedFilters.dateRange.end
+                          ) {
+                            const orderDate = new Date(order.created_at)
+                              .toISOString()
+                              .split("T")[0];
+                            if (
+                              orderDate < advancedFilters.dateRange.start ||
+                              orderDate > advancedFilters.dateRange.end
+                            ) {
+                              return false;
+                            }
+                          }
+
+                          // فلترة حسب الحالة
+                          if (
+                            advancedFilters.status.length > 0 &&
+                            !advancedFilters.status.includes(order.status)
+                          ) {
+                            return false;
+                          }
+
+                          // فلترة حسب طريقة الدفع
+                          if (
+                            advancedFilters.paymentMethod.length > 0 &&
+                            !advancedFilters.paymentMethod.includes(
+                              order.payment_method,
+                            )
+                          ) {
+                            return false;
+                          }
+
+                          // فلترة حسب نوع الطلب
+                          if (
+                            advancedFilters.orderType.length > 0 &&
+                            order.order_type &&
+                            !advancedFilters.orderType.includes(
+                              order.order_type,
+                            )
+                          ) {
+                            return false;
+                          }
+
+                          // فلترة حسب المدينة
+                          if (
+                            advancedFilters.city.length > 0 &&
+                            !advancedFilters.city.includes(order.city)
+                          ) {
+                            return false;
+                          }
+
+                          // فلترة حسب نطاق المبلغ
+                          if (
+                            advancedFilters.minAmount &&
+                            order.total_amount < advancedFilters.minAmount
+                          ) {
+                            return false;
+                          }
+                          if (
+                            advancedFilters.maxAmount &&
+                            order.total_amount > advancedFilters.maxAmount
+                          ) {
+                            return false;
+                          }
+
+                          // فلترة حسب الفرع
+                          if (
+                            advancedFilters.branchId &&
+                            order.branch_id !== advancedFilters.branchId
+                          ) {
+                            return false;
+                          }
+
+                          // فلترة حسب المنتج
+                          if (advancedFilters.productId) {
+                            const hasProduct = order.items.some(
+                              (item) => item.id === advancedFilters.productId,
+                            );
+                            if (!hasProduct) return false;
+                          }
+
+                          // فلترة حسب البحث
+                          if (advancedFilters.searchQuery) {
+                            const query =
+                              advancedFilters.searchQuery.toLowerCase();
+                            const matches =
+                              order.customer_name
+                                .toLowerCase()
+                                .includes(query) ||
+                              order.phone.includes(query) ||
+                              order.city.toLowerCase().includes(query) ||
+                              order.items.some((item) =>
+                                item.product_name.toLowerCase().includes(query),
+                              );
+                            if (!matches) return false;
+                          }
+
+                          return true;
+                        })
+                        .sort((a, b) => {
+                          let comparison = 0;
+                          // استخدام advancedFilters.sortBy إذا كان محدداً، وإلا استخدام التاريخ
+                          const sortField = advancedFilters.sortBy || "date";
+
+                          switch (sortField) {
+                            case "date":
+                              comparison =
+                                new Date(a.created_at).getTime() -
+                                new Date(b.created_at).getTime();
+                              break;
+                            case "amount":
+                              comparison = a.total_amount - b.total_amount;
+                              break;
+                            case "status":
+                              comparison = a.status.localeCompare(b.status);
+                              break;
+                            case "customer":
+                              comparison = a.customer_name.localeCompare(
+                                b.customer_name,
+                              );
+                              break;
+                            default:
+                              comparison =
+                                new Date(a.created_at).getTime() -
+                                new Date(b.created_at).getTime();
+                          }
+
+                          // استخدام orderSortDir للترتيب حسب التاريخ عند الضغط على الزر
+                          if (sortField === "date") {
+                            return orderSortDir === "desc"
+                              ? -comparison
+                              : comparison;
+                          }
+
+                          // للترتيبات الأخرى، استخدام advancedFilters.sortOrder
+                          return advancedFilters.sortOrder === "desc"
+                            ? -comparison
+                            : comparison;
+                        });
+                      return filteredOrders.length === orders.length
+                        ? `إجمالي: ${orders.length} طلب`
+                        : `${filteredOrders.length} من ${orders.length} طلب`;
+                    })()}
+                  </span>
+                </div>
+              </div>
+
+              {(() => {
+                // تطبيق الفلاتر المتقدمة على الطلبات
+                const filteredOrders = orders
+                  .filter((order) => {
+                    // فلترة حسب النطاق الزمني (من فلتر التاريخ البسيط)
+                    if (orderDateFilter) {
+                      const orderDate = new Date(order.created_at)
+                        .toISOString()
+                        .split("T")[0];
+                      if (orderDate !== orderDateFilter) {
+                        return false;
+                      }
+                    }
+
+                    // فلترة حسب النطاق الزمني (من الفلاتر المتقدمة)
                     if (
-                      orderDate < advancedFilters.dateRange.start ||
-                      orderDate > advancedFilters.dateRange.end
+                      advancedFilters.dateRange.start &&
+                      advancedFilters.dateRange.end
+                    ) {
+                      const orderDate = new Date(order.created_at)
+                        .toISOString()
+                        .split("T")[0];
+                      if (
+                        orderDate < advancedFilters.dateRange.start ||
+                        orderDate > advancedFilters.dateRange.end
+                      ) {
+                        return false;
+                      }
+                    }
+
+                    // فلترة حسب الحالة
+                    if (
+                      advancedFilters.status.length > 0 &&
+                      !advancedFilters.status.includes(order.status)
                     ) {
                       return false;
                     }
-                  }
 
-                  // فلترة حسب الحالة
-                  if (
-                    advancedFilters.status.length > 0 &&
-                    !advancedFilters.status.includes(order.status)
-                  ) {
-                    return false;
-                  }
+                    // فلترة حسب طريقة الدفع
+                    if (
+                      advancedFilters.paymentMethod.length > 0 &&
+                      !advancedFilters.paymentMethod.includes(
+                        order.payment_method,
+                      )
+                    ) {
+                      return false;
+                    }
 
-                  // فلترة حسب طريقة الدفع
-                  if (
-                    advancedFilters.paymentMethod.length > 0 &&
-                    !advancedFilters.paymentMethod.includes(
-                      order.payment_method,
-                    )
-                  ) {
-                    return false;
-                  }
+                    // فلترة حسب نوع الطلب
+                    if (
+                      advancedFilters.orderType.length > 0 &&
+                      order.order_type &&
+                      !advancedFilters.orderType.includes(order.order_type)
+                    ) {
+                      return false;
+                    }
 
-                  // فلترة حسب نوع الطلب
-                  if (
-                    advancedFilters.orderType.length > 0 &&
-                    order.order_type &&
-                    !advancedFilters.orderType.includes(order.order_type)
-                  ) {
-                    return false;
-                  }
+                    // فلترة حسب المدينة
+                    if (
+                      advancedFilters.city.length > 0 &&
+                      !advancedFilters.city.includes(order.city)
+                    ) {
+                      return false;
+                    }
 
-                  // فلترة حسب المدينة
-                  if (
-                    advancedFilters.city.length > 0 &&
-                    !advancedFilters.city.includes(order.city)
-                  ) {
-                    return false;
-                  }
+                    // فلترة حسب نطاق المبلغ
+                    if (
+                      advancedFilters.minAmount &&
+                      order.total_amount < advancedFilters.minAmount
+                    ) {
+                      return false;
+                    }
+                    if (
+                      advancedFilters.maxAmount &&
+                      order.total_amount > advancedFilters.maxAmount
+                    ) {
+                      return false;
+                    }
 
-                  // فلترة حسب نطاق المبلغ
-                  if (
-                    advancedFilters.minAmount &&
-                    order.total_amount < advancedFilters.minAmount
-                  ) {
-                    return false;
-                  }
-                  if (
-                    advancedFilters.maxAmount &&
-                    order.total_amount > advancedFilters.maxAmount
-                  ) {
-                    return false;
-                  }
+                    // فلترة حسب الفرع
+                    if (
+                      advancedFilters.branchId &&
+                      order.branch_id !== advancedFilters.branchId
+                    ) {
+                      return false;
+                    }
 
-                  // فلترة حسب الفرع
-                  if (
-                    advancedFilters.branchId &&
-                    order.branch_id !== advancedFilters.branchId
-                  ) {
-                    return false;
-                  }
-
-                  // فلترة حسب المنتج
-                  if (advancedFilters.productId) {
-                    const hasProduct = order.items.some(
-                      (item) => item.id === advancedFilters.productId,
-                    );
-                    if (!hasProduct) return false;
-                  }
-
-                  // فلترة حسب البحث
-                  if (advancedFilters.searchQuery) {
-                    const query = advancedFilters.searchQuery.toLowerCase();
-                    const matches =
-                      order.customer_name.toLowerCase().includes(query) ||
-                      order.phone.includes(query) ||
-                      order.city.toLowerCase().includes(query) ||
-                      order.items.some((item) =>
-                        item.product_name.toLowerCase().includes(query),
+                    // فلترة حسب المنتج
+                    if (advancedFilters.productId) {
+                      const hasProduct = order.items.some(
+                        (item) => item.id === advancedFilters.productId,
                       );
-                    if (!matches) return false;
-                  }
+                      if (!hasProduct) return false;
+                    }
 
-                  return true;
-                })
-                .sort((a, b) => {
-                  let comparison = 0;
-                  switch (advancedFilters.sortBy) {
-                    case "date":
-                      comparison =
-                        new Date(a.created_at).getTime() -
-                        new Date(b.created_at).getTime();
-                      break;
-                    case "amount":
-                      comparison = a.total_amount - b.total_amount;
-                      break;
-                    case "status":
-                      comparison = a.status.localeCompare(b.status);
-                      break;
-                    case "customer":
-                      comparison = a.customer_name.localeCompare(
-                        b.customer_name,
-                      );
-                      break;
-                  }
-                  return advancedFilters.sortOrder === "desc"
-                    ? -comparison
-                    : comparison;
-                });
+                    // فلترة حسب البحث
+                    if (advancedFilters.searchQuery) {
+                      const query = advancedFilters.searchQuery.toLowerCase();
+                      const matches =
+                        order.customer_name.toLowerCase().includes(query) ||
+                        order.phone.includes(query) ||
+                        order.city.toLowerCase().includes(query) ||
+                        order.items.some((item) =>
+                          item.product_name.toLowerCase().includes(query),
+                        );
+                      if (!matches) return false;
+                    }
 
-              console.log("جميع الطلبات:", orders);
-              console.log("الطلب الأول:", orders[0]?.items);
+                    return true;
+                  })
+                  .sort((a, b) => {
+                    let comparison = 0;
+                    // استخدام advancedFilters.sortBy إذا كان محدداً، وإلا استخدام التاريخ
+                    const sortField = advancedFilters.sortBy || "date";
 
-              return (
-                <div className="flex flex-col gap-4">
-                  {/* Date controls */}
-                  <div className="admin-panel animate-slide-up-fade">
-                    <div className="relative z-10 flex flex-wrap items-center gap-3 p-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar
-                          className="h-4 w-4"
-                          style={{ color: T.accentLight }}
-                        />
-                        <span
-                          className="text-xs font-semibold"
-                          style={{ color: T.textMuted }}
-                        >
-                          ترتيب حسب التاريخ:
-                        </span>
-                      </div>
-                      <button
-                        onClick={() =>
-                          setOrderSortDir(
-                            orderSortDir === "desc" ? "asc" : "desc",
-                          )
-                        }
-                        className="admin-btn-glow flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors"
-                        style={{ borderColor: T.border, color: T.accentLight }}
-                      >
-                        {orderSortDir === "desc"
-                          ? "الأحدث أولاً ↓"
-                          : "الأقدم أولاً ↑"}
-                      </button>
-                      <input
-                        type="date"
-                        value={orderDateFilter}
-                        onChange={(e) => setOrderDateFilter(e.target.value)}
-                        className="rounded-lg border px-3 py-1.5 text-xs outline-none"
-                        style={{
-                          borderColor: T.border,
-                          background: T.surface,
-                          color: T.text,
-                        }}
-                      />
-                      {orderDateFilter && (
-                        <button
-                          onClick={() => setOrderDateFilter("")}
-                          className="admin-btn-glow flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition-colors"
-                          style={{ borderColor: T.border, color: T.textMuted }}
-                        >
-                          <RotateCcw className="h-3 w-3" /> مسح الفلتر
-                        </button>
-                      )}
-                      <span
-                        className="mr-auto text-xs"
-                        style={{ color: T.textDim }}
-                      >
-                        {filteredOrders.length === orders.length
-                          ? `إجمالي: ${orders.length} طلب`
-                          : `${filteredOrders.length} من ${orders.length} طلب`}
-                      </span>
-                    </div>
-                  </div>
+                    switch (sortField) {
+                      case "date":
+                        comparison =
+                          new Date(a.created_at).getTime() -
+                          new Date(b.created_at).getTime();
+                        break;
+                      case "amount":
+                        comparison = a.total_amount - b.total_amount;
+                        break;
+                      case "status":
+                        comparison = a.status.localeCompare(b.status);
+                        break;
+                      case "customer":
+                        comparison = a.customer_name.localeCompare(
+                          b.customer_name,
+                        );
+                        break;
+                      default:
+                        comparison =
+                          new Date(a.created_at).getTime() -
+                          new Date(b.created_at).getTime();
+                    }
 
-                  {filteredOrders.length === 0 ? (
-                    <EmptyState
-                      text={
-                        orderDateFilter
-                          ? "لا توجد طلبات في هذا التاريخ"
-                          : "لا توجد طلبات حتى الآن"
-                      }
-                    />
-                  ) : (
-                    filteredOrders.map((order, idx) => (
-                      <div
-                        key={order.id}
-                        className="admin-card animate-card-enter p-6"
-                        style={{
-                          animationDelay: `${idx * 60}ms`,
-                          animationFillMode: "backwards",
-                        }}
-                      >
-                        <div className="relative z-10">
-                          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-                            <div>
-                              <div className="flex items-center gap-3">
-                                <h3
-                                  className="text-lg font-bold"
-                                  style={{ color: T.text }}
-                                >
-                                  {"طلب #"}
-                                  {order.id}
-                                </h3>
-                                {getStatusBadge(order.status)}
-                                {/* عرض العداد التنازلي للطلبات قيد الانتظار */}
-                                {/* عرض العداد التنازلي للطلبات قيد الانتظار */}
-                                {order.status === "pending" &&
-                                  (order.seconds_remaining ?? 0) > 0 && (
-                                    <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                      <Clock className="h-4 w-4 text-amber-400" />
-                                      <span className="text-xs text-amber-400">
-                                        متبقي للعميل:{" "}
-                                        {formatTime(
-                                          order.seconds_remaining ?? 0,
-                                        )}
-                                      </span>
-                                      <span className="text-xs text-amber-400/70 mr-auto">
-                                        (يمكن للعميل إلغاء الطلب)
-                                      </span>
-                                    </div>
-                                  )}
-                              </div>
-                              <p
-                                className="mt-1 text-sm"
-                                style={{ color: T.textDim }}
+                    // استخدام orderSortDir للترتيب حسب التاريخ عند الضغط على الزر
+                    if (sortField === "date") {
+                      return orderSortDir === "desc" ? -comparison : comparison;
+                    }
+
+                    // للترتيبات الأخرى، استخدام advancedFilters.sortOrder
+                    return advancedFilters.sortOrder === "desc"
+                      ? -comparison
+                      : comparison;
+                  });
+
+                console.log("📦 جميع الطلبات:", orders);
+                console.log("🔍 الطلبات بعد الفلتر:", filteredOrders);
+
+                return filteredOrders.length === 0 ? (
+                  <EmptyState
+                    text={
+                      orderDateFilter
+                        ? "لا توجد طلبات في هذا التاريخ"
+                        : "لا توجد طلبات حتى الآن"
+                    }
+                  />
+                ) : (
+                  filteredOrders.map((order, idx) => (
+                    <div
+                      key={order.id}
+                      className="admin-card animate-card-enter p-6"
+                      style={{
+                        animationDelay: `${idx * 60}ms`,
+                        animationFillMode: "backwards",
+                      }}
+                    >
+                      {/* باقي الكود كما هو - محتوى الطلب */}
+                      <div className="relative z-10">
+                        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-3">
+                              <h3
+                                className="text-lg font-bold"
+                                style={{ color: T.text }}
                               >
-                                {new Date(order.created_at).toLocaleString(
-                                  "ar-LY",
+                                {"طلب #"}
+                                {order.id}
+                              </h3>
+                              {getStatusBadge(order.status)}
+                              {/* عرض العداد التنازلي للطلبات قيد الانتظار */}
+                              {order.status === "pending" &&
+                                (order.seconds_remaining ?? 0) > 0 && (
+                                  <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                    <Clock className="h-4 w-4 text-amber-400" />
+                                    <span className="text-xs text-amber-400">
+                                      متبقي للعميل:{" "}
+                                      {formatTime(order.seconds_remaining ?? 0)}
+                                    </span>
+                                    <span className="text-xs text-amber-400/70 mr-auto">
+                                      (يمكن للعميل إلغاء الطلب)
+                                    </span>
+                                  </div>
                                 )}
-                              </p>
                             </div>
-                            <button
-                              onClick={() => printInvoice(order)}
-                              className="admin-btn-glow flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition-colors"
-                              style={{
-                                borderColor: T.border,
-                                color: T.accentLight,
-                              }}
+                            <p
+                              className="mt-1 text-sm"
+                              style={{ color: T.textDim }}
                             >
-                              <Printer className="h-4 w-4" /> طباعة الفاتورة
-                            </button>
+                              {new Date(order.created_at).toLocaleString(
+                                "ar-LY",
+                              )}
+                            </p>
                           </div>
+                          <button
+                            onClick={() => printInvoice(order)}
+                            className="admin-btn-glow flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition-colors"
+                            style={{
+                              borderColor: T.border,
+                              color: T.accentLight,
+                            }}
+                          >
+                            <Printer className="h-4 w-4" /> طباعة الفاتورة
+                          </button>
+                        </div>
 
-                          <div className="mb-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="mb-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                          <InfoItem
+                            label="العميل"
+                            value={order.customer_name}
+                          />
+                          <InfoItem
+                            label="الهاتف"
+                            value={order.phone}
+                            dir="ltr"
+                          />
+                          {order.secondary_phone && (
                             <InfoItem
-                              label="العميل"
-                              value={order.customer_name}
-                            />
-                            <InfoItem
-                              label="الهاتف"
-                              value={order.phone}
+                              label="هاتف ثانوي"
+                              value={order.secondary_phone}
                               dir="ltr"
                             />
-                            {order.secondary_phone && (
-                              <InfoItem
-                                label="هاتف ثانوي"
-                                value={order.secondary_phone}
-                                dir="ltr"
-                              />
-                            )}
-                            <InfoItem label="العنوان" value={order.address} />
-                            <InfoItem label="المدينة" value={order.city} />
-                            <InfoItem
-                              label="الدفع"
-                              value={
-                                order.payment_method === "card"
-                                  ? "بطاقة بنكية"
-                                  : order.payment_method === "cash"
-                                    ? "الدفع عند الاستلام"
-                                    : "تحويل LYPAY"
-                              }
-                            />
-                          </div>
+                          )}
+                          <InfoItem label="العنوان" value={order.address} />
+                          <InfoItem label="المدينة" value={order.city} />
+                          <InfoItem
+                            label="الدفع"
+                            value={
+                              order.payment_method === "card"
+                                ? "بطاقة بنكية"
+                                : order.payment_method === "cash"
+                                  ? "الدفع عند الاستلام"
+                                  : "تحويل LYPAY"
+                            }
+                          />
+                        </div>
 
-                          <div
-                            className="mb-4 overflow-x-auto rounded-xl border"
-                            style={{ borderColor: T.border }}
-                          >
-                            <table className="w-full text-sm">
-                              <thead>
+                        <div
+                          className="mb-4 overflow-x-auto rounded-xl border"
+                          style={{ borderColor: T.border }}
+                        >
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr
+                                style={{
+                                  background: T.surfaceDeep,
+                                  borderBottom: `1px solid ${T.border}`,
+                                }}
+                              >
+                                <th
+                                  className="px-4 py-2 text-right"
+                                  style={{ color: T.accentLight }}
+                                >
+                                  المنتج
+                                </th>
+                                <th
+                                  className="px-4 py-2 text-center"
+                                  style={{ color: T.accentLight }}
+                                >
+                                  الكمية
+                                </th>
+                                <th
+                                  className="px-4 py-2 text-center"
+                                  style={{ color: T.accentLight }}
+                                >
+                                  السعر
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {order.items?.map((item) => (
                                 <tr
+                                  key={item.id}
+                                  className="admin-row-hover"
                                   style={{
-                                    background: T.surfaceDeep,
-                                    borderBottom: `1px solid ${T.border}`,
+                                    borderBottom: `1px solid hsl(200 80% 55% / 0.05)`,
                                   }}
                                 >
-                                  <th
-                                    className="px-4 py-2 text-right"
-                                    style={{ color: T.accentLight }}
+                                  <td
+                                    className="px-4 py-2"
+                                    style={{ color: T.text }}
                                   >
-                                    المنتج
-                                  </th>
-                                  <th
+                                    <div className="font-medium">
+                                      {item.product_name}
+                                    </div>
+                                    {(() => {
+                                      // التعامل مع selected_options بأنواعها المختلفة
+                                      let options = item.selected_options;
+
+                                      // إذا كانت نصاً، نحولها لمصفوفة
+                                      if (typeof options === "string") {
+                                        try {
+                                          options = JSON.parse(options);
+                                        } catch (e) {
+                                          options = [];
+                                        }
+                                      }
+
+                                      // إذا كانت مصفوفة وفيها عناصر، نعرضها
+                                      if (
+                                        Array.isArray(options) &&
+                                        options.length > 0
+                                      ) {
+                                        return (
+                                          <div className="mt-2 space-y-1">
+                                            {options.map(
+                                              (opt: any, idx: number) => (
+                                                <div
+                                                  key={idx}
+                                                  className="flex items-center text-xs text-[var(--gold)]/80"
+                                                >
+                                                  <span className="ml-2">
+                                                    •
+                                                  </span>
+                                                  <span>{opt.name}</span>
+                                                  <span className="mr-1 text-[var(--gold)]/60">
+                                                    (+{opt.price} د.ل)
+                                                  </span>
+                                                </div>
+                                              ),
+                                            )}
+                                          </div>
+                                        );
+                                      }
+
+                                      return null;
+                                    })()}
+                                  </td>
+                                  <td
+                                    className="px-4 py-2 text-center"
+                                    style={{ color: T.text }}
+                                  >
+                                    {item.quantity}
+                                  </td>
+                                  <td
                                     className="px-4 py-2 text-center"
                                     style={{ color: T.accentLight }}
                                   >
-                                    الكمية
-                                  </th>
-                                  <th
-                                    className="px-4 py-2 text-center"
-                                    style={{ color: T.accentLight }}
-                                  >
-                                    السعر
-                                  </th>
+                                    {Number(item.unit_price).toFixed(2)} د.ل
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {order.items?.map((item) => (
-                                  <tr
-                                    key={item.id}
-                                    className="admin-row-hover"
-                                    style={{
-                                      borderBottom: `1px solid hsl(200 80% 55% / 0.05)`,
-                                    }}
-                                  >
-                                    <td
-                                      className="px-4 py-2"
-                                      style={{ color: T.text }}
-                                    >
-                                      <div className="font-medium">
-                                        {item.product_name}
-                                      </div>
-                                      {(() => {
-                                        // التعامل مع selected_options بأنواعها المختلفة
-                                        let options = item.selected_options;
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
 
-                                        // إذا كانت نصاً، نحولها لمصفوفة
-                                        if (typeof options === "string") {
-                                          try {
-                                            options = JSON.parse(options);
-                                          } catch (e) {
-                                            options = [];
-                                          }
-                                        }
-
-                                        // إذا كانت مصفوفة وفيها عناصر، نعرضها
-                                        if (
-                                          Array.isArray(options) &&
-                                          options.length > 0
-                                        ) {
-                                          return (
-                                            <div className="mt-2 space-y-1">
-                                              {options.map(
-                                                (opt: any, idx: number) => (
-                                                  <div
-                                                    key={idx}
-                                                    className="flex items-center text-xs text-[var(--gold)]/80"
-                                                  >
-                                                    <span className="ml-2">
-                                                      •
-                                                    </span>
-                                                    <span>{opt.name}</span>
-                                                    <span className="mr-1 text-[var(--gold)]/60">
-                                                      (+{opt.price} د.ل)
-                                                    </span>
-                                                  </div>
-                                                ),
-                                              )}
-                                            </div>
-                                          );
-                                        }
-
-                                        return null;
-                                      })()}
-                                    </td>
-                                    <td
-                                      className="px-4 py-2 text-center"
-                                      style={{ color: T.text }}
-                                    >
-                                      {item.quantity}
-                                    </td>
-                                    <td
-                                      className="px-4 py-2 text-center"
-                                      style={{ color: T.accentLight }}
-                                    >
-                                      {Number(item.unit_price).toFixed(2)} د.ل
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                          <div className="flex items-center gap-6 text-sm">
+                            <span style={{ color: T.textMuted }}>
+                              {"توصيل: "}
+                              <b style={{ color: T.accentLight }}>
+                                {Number(order.delivery_fee).toFixed(2)} د.ل
+                              </b>
+                            </span>
+                            <span style={{ color: T.textMuted }}>
+                              {"الإجمالي: "}
+                              <b
+                                className="text-base"
+                                style={{ color: T.text }}
+                              >
+                                {Number(order.total_amount).toFixed(2)} د.ل
+                              </b>
+                            </span>
                           </div>
-
-                          <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex items-center gap-6 text-sm">
-                              <span style={{ color: T.textMuted }}>
-                                {"توصيل: "}
-                                <b style={{ color: T.accentLight }}>
-                                  {Number(order.delivery_fee).toFixed(2)} د.ل
-                                </b>
-                              </span>
-                              <span style={{ color: T.textMuted }}>
-                                {"الإجمالي: "}
-                                <b
-                                  className="text-base"
-                                  style={{ color: T.text }}
-                                >
-                                  {Number(order.total_amount).toFixed(2)} د.ل
-                                </b>
-                              </span>
-                            </div>
-                            <div className="flex gap-2">
-                              {order.status === "pending" && (
-                                <>
-                                  <button
-                                    onClick={() =>
-                                      updateOrderStatus(order.id, "confirmed")
-                                    }
-                                    className="admin-btn-glow flex items-center gap-1 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs text-emerald-400 hover:bg-emerald-500/25"
-                                  >
-                                    <CheckCircle className="h-3.5 w-3.5" />{" "}
-                                    تأكيد
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      updateOrderStatus(order.id, "cancelled")
-                                    }
-                                    className="admin-btn-glow flex items-center gap-1 rounded-lg bg-red-500/15 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/25"
-                                  >
-                                    <XCircle className="h-3.5 w-3.5" /> إلغاء
-                                  </button>
-                                </>
-                              )}
-                              {order.status === "confirmed" && (
+                          <div className="flex gap-2">
+                            {order.status === "pending" && (
+                              <>
                                 <button
                                   onClick={() =>
-                                    updateOrderStatus(order.id, "preparing")
+                                    updateOrderStatus(order.id, "confirmed")
                                   }
-                                  className="admin-btn-glow flex items-center gap-1 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs text-sky-400 hover:bg-sky-500/25"
+                                  className="admin-btn-glow flex items-center gap-1 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs text-emerald-400 hover:bg-emerald-500/25"
                                 >
-                                  <Clock className="h-3.5 w-3.5" /> قيد التحضير
+                                  <CheckCircle className="h-3.5 w-3.5" /> تأكيد
                                 </button>
-                              )}
-                              {order.status === "preparing" && (
                                 <button
                                   onClick={() =>
-                                    updateOrderStatus(order.id, "delivered")
+                                    updateOrderStatus(order.id, "cancelled")
                                   }
-                                  className="admin-btn-glow flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs hover:opacity-80"
-                                  style={{
-                                    background: "hsl(200 80% 55% / 0.15)",
-                                    color: T.accentLight,
-                                  }}
+                                  className="admin-btn-glow flex items-center gap-1 rounded-lg bg-red-500/15 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/25"
                                 >
-                                  <CheckCircle className="h-3.5 w-3.5" /> تم
-                                  التوصيل
+                                  <XCircle className="h-3.5 w-3.5" /> إلغاء
                                 </button>
-                              )}
-                            </div>
+                              </>
+                            )}
+                            {order.status === "confirmed" && (
+                              <button
+                                onClick={() =>
+                                  updateOrderStatus(order.id, "preparing")
+                                }
+                                className="admin-btn-glow flex items-center gap-1 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs text-sky-400 hover:bg-sky-500/25"
+                              >
+                                <Clock className="h-3.5 w-3.5" /> قيد التحضير
+                              </button>
+                            )}
+                            {order.status === "preparing" && (
+                              <button
+                                onClick={() =>
+                                  updateOrderStatus(order.id, "delivered")
+                                }
+                                className="admin-btn-glow flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs hover:opacity-80"
+                                style={{
+                                  background: "hsl(200 80% 55% / 0.15)",
+                                  color: T.accentLight,
+                                }}
+                              >
+                                <CheckCircle className="h-3.5 w-3.5" /> تم
+                                التوصيل
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
-              );
-            })()}
+                    </div>
+                  ))
+                );
+              })()}
+            </div>
+          )}
 
           {/* ========== PRODUCTS TAB ========== */}
           {activeTab === "products" && (
@@ -2960,8 +3203,8 @@ function PrintSalesButton({
       const res = await fetch(`/api/admin/sales-report?period=${period}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
-    const s = data.summary || {};
-console.log(`📊 تقرير ${period}:`, s); 
+      const s = data.summary || {};
+      console.log(`📊 تقرير ${period}:`, s);
       const paymentLabels = {
         card: "بطاقة بنكية",
         cash: "الدفع عند الاستلام",

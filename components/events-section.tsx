@@ -1,7 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Check, ShoppingCart, Loader2, Plus, Minus, X } from "lucide-react";
+import {
+  Check,
+  ShoppingCart,
+  Loader2,
+  Plus,
+  Minus,
+  X,
+  Calendar,
+  Gift,
+  Star,
+  Heart,
+  AlertCircle,
+  CheckCircle,
+  ArrowLeft,
+  Package,
+} from "lucide-react";
 import { addToCart } from "@/lib/cart";
 import { toast } from "sonner";
 
@@ -52,6 +67,23 @@ interface EventCategory {
   }[];
 }
 
+interface SelectedItem {
+  item: DBEvent;
+  quantity: number;
+  selectedOptions: any[];
+  finalPrice: number;
+}
+
+// أيقونات افتراضية جميلة للمناسبات
+const categoryIcons: Record<string, { icon: string; bg: string }> = {
+  أعراس: { icon: "💍", bg: "from-pink-500/20 to-rose-500/20" },
+  تخرج: { icon: "🎓", bg: "from-blue-500/20 to-indigo-500/20" },
+  ميلاد: { icon: "🎂", bg: "from-yellow-500/20 to-amber-500/20" },
+  خطوبة: { icon: "💑", bg: "from-purple-500/20 to-pink-500/20" },
+  اجتماعات: { icon: "🤝", bg: "from-gray-500/20 to-slate-500/20" },
+  default: { icon: "🎉", bg: "from-[var(--gold)]/20 to-[var(--gold)]/5" },
+};
+
 function makeFallbackCategories(): EventCategory[] {
   return [];
 }
@@ -66,7 +98,8 @@ function makeDBCategories(dbEvents: DBEvent[]): EventCategory[] {
     .map((catName) => ({
       id: `cat-${catName}`,
       title: catName,
-      icon: dbEvents.find((ev) => ev.category === catName && ev.icon)?.icon || null,
+      icon:
+        dbEvents.find((ev) => ev.category === catName && ev.icon)?.icon || null,
       items: dbEvents
         .filter((ev) => ev.category === catName)
         .map((ev) => ({
@@ -84,35 +117,47 @@ function makeDBCategories(dbEvents: DBEvent[]): EventCategory[] {
 }
 
 export default function EventsSection() {
-  const [eventCategories, setEventCategories] = useState<EventCategory[]>(makeFallbackCategories);
+  const [eventCategories, setEventCategories] = useState<EventCategory[]>(
+    makeFallbackCategories,
+  );
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [visible, setVisible] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
   // حالة الباقة - اختيار واحد من كل تصنيف
-  const [selectedItems, setSelectedItems] = useState<Record<string, {
-    item: any;
-    quantity: number;
-    selectedOptions: any[];
-    finalPrice: number;
-  } | null>>({});
+  const [selectedItems, setSelectedItems] = useState<Record<string, SelectedItem | null>>({});
 
   // Modal State
   const [modalEvent, setModalEvent] = useState<DBEvent | null>(null);
   const [modalCategoryId, setModalCategoryId] = useState<string>("");
   const [selections, setSelections] = useState<Record<number, number[]>>({});
   const [quantity, setQuantity] = useState(1);
-  
+
   // Price cache
-  const [priceCache, setPriceCache] = useState<Record<string, { price: number; options: any[] }>>({});
+  const [priceCache, setPriceCache] = useState<
+    Record<string, { price: number; options: any[] }>
+  >({});
+
+  // حساب التقدم
+  const selectedCount = Object.keys(selectedItems).length;
+  const totalCategories = eventCategories.length;
+  const isComplete = selectedCount === totalCategories && totalCategories > 0;
+  const progressPercentage = totalCategories > 0 ? (selectedCount / totalCategories) * 100 : 0;
+
+  // المجموعات المتبقية
+  const remainingCategories = eventCategories.filter(cat => !selectedItems[cat.id]);
 
   const fetchEvents = useCallback(async () => {
     try {
       const res = await fetch("/api/events");
       if (res.ok) {
         const data: DBEvent[] = await res.json();
-        if (data.length > 0) {
-          setEventCategories(makeDBCategories(data));
+        const processedData = data.map((event) => ({
+          ...event,
+          id: Number(event.id),
+        }));
+        if (processedData.length > 0) {
+          setEventCategories(makeDBCategories(processedData));
         }
       }
     } catch {
@@ -155,8 +200,6 @@ export default function EventsSection() {
       });
       setSelections(initial);
       setQuantity(1);
-      
-      // Preload prices
       preloadAllPrices(modalEvent);
     }
   }, [modalEvent]);
@@ -229,13 +272,12 @@ export default function EventsSection() {
       return cached;
     }
 
-    // Fallback calculation
     let totalPrice = Number(modalEvent.price);
     const selectedOptionsList: any[] = [];
 
     Object.entries(selections).forEach(([groupId, optionIds]) => {
       const group = modalEvent.option_groups?.find(
-        (g) => g.id === Number(groupId)
+        (g) => g.id === Number(groupId),
       );
       if (group) {
         optionIds.forEach((oid) => {
@@ -291,21 +333,20 @@ export default function EventsSection() {
     });
   };
 
-  // ========== دالة التحقق من المستخدم قبل إضافة المناسبة ==========
-  const handleEventSelection = async (event: DBEvent | null, categoryId: string) => {
+  const handleEventSelection = async (
+    event: DBEvent | null,
+    categoryId: string,
+  ) => {
     if (!event) return;
 
     try {
-      // التحقق من حالة المستخدم
       const res = await fetch("/api/auth/me");
       const data = await res.json();
 
       if (data.user) {
-        // مستخدم مسجل → فتح نافذة الاختيار مباشرة
         setModalEvent(event);
         setModalCategoryId(categoryId);
       } else {
-        // زائر → حفظ بيانات المناسبة في localStorage والتوجيه للتسجيل
         const eventToSave = {
           id: event.id,
           name: event.name,
@@ -326,28 +367,48 @@ export default function EventsSection() {
   };
 
   const confirmSelection = () => {
-    if (!modalEvent || !modalCategoryId || !calculatedResult) return;
+    if (!modalEvent || !modalCategoryId) return;
 
-    // Check required groups
-    for (const group of modalEvent.option_groups || []) {
-      if (
-        group.isRequired &&
-        (!selections[group.id] || selections[group.id].length === 0)
-      ) {
-        toast.error(`الرجاء اختيار ${group.name}`);
-        return;
+    // بناء الخيارات يدوياً من selections
+    const selectedOptionsForStorage: any[] = [];
+    let calculatedPrice = Number(modalEvent.price);
+
+    // التحقق من المجموعات الإجبارية وجمع الخيارات المحددة
+    if (modalEvent.option_groups && modalEvent.option_groups.length > 0) {
+      for (const group of modalEvent.option_groups) {
+        const selectedIds = selections[group.id] || [];
+
+        // التحقق من المجموعات الإجبارية
+        if (group.isRequired && selectedIds.length === 0) {
+          toast.error(`الرجاء اختيار ${group.name}`);
+          return;
+        }
+
+        // جمع الخيارات المحددة
+        for (const optId of selectedIds) {
+          const option = group.options.find((o) => o.id === optId);
+          if (option) {
+            selectedOptionsForStorage.push({
+              id: option.id,
+              name: option.name,
+              price: option.price,
+              optionId: option.id,
+            });
+            calculatedPrice += Number(option.price);
+          }
+        }
       }
     }
 
-    // Save to selected items
-    setSelectedItems(prev => ({
+    // حفظ في selectedItems
+    setSelectedItems((prev) => ({
       ...prev,
       [modalCategoryId]: {
         item: modalEvent,
         quantity: quantity,
-        selectedOptions: calculatedResult.options,
-        finalPrice: calculatedResult.price,
-      }
+        selectedOptions: selectedOptionsForStorage,
+        finalPrice: calculatedPrice,
+      },
     }));
 
     toast.success(`تم اختيار ${modalEvent.name} للباقة`);
@@ -355,49 +416,53 @@ export default function EventsSection() {
   };
 
   const removeSelection = (categoryId: string) => {
-    setSelectedItems(prev => {
+    setSelectedItems((prev) => {
       const newSelected = { ...prev };
       delete newSelected[categoryId];
       return newSelected;
     });
+    toast.success("تم إزالة العنصر من الباقة");
   };
 
   const addPackageToCart = () => {
-    let added = 0;
+    // التحقق من اكتمال الباقة
+    if (!isComplete) {
+      toast.error(`الرجاء اختيار عنصر من الأقسام المتبقية: ${remainingCategories.map(c => c.title).join('، ')}`);
+      return;
+    }
+
     let totalPrice = 0;
 
     for (const [catId, data] of Object.entries(selectedItems)) {
       if (data) {
-        const category = eventCategories.find(c => c.id === catId);
+        const category = eventCategories.find((c) => c.id === catId);
         if (category) {
+          // تحويل الخيارات مع التأكد من وجود optionId
+          const optionsForCart = data.selectedOptions.map((opt: any) => ({
+            id: opt.id,
+            name: opt.name,
+            price: opt.price,
+            optionId: opt.optionId || opt.id,
+          }));
+
           for (let i = 0; i < data.quantity; i++) {
             addToCart({
-              productId: data.item.id,
+              productId: Number(data.item.id),
               name: data.item.name,
-              basePrice: data.item.price,
-              finalPrice: data.finalPrice,
+              basePrice: Number(data.item.price),
+              finalPrice: Number(data.finalPrice),
               category: "مناسبات",
-              selectedOptions: data.selectedOptions,
+              selectedOptions: optionsForCart,
             });
           }
-          added++;
-          totalPrice += data.finalPrice * data.quantity;
+          totalPrice += Number(data.finalPrice) * data.quantity;
         }
       }
     }
 
-    if (added > 0) {
-      toast.success(`تمت إضافة ${added} عناصر إلى السلة (إجمالي ${totalPrice.toFixed(2)} د.ل)`);
-      setSelectedItems({});
-    } else {
-      toast.error("يرجى اختيار عنصر واحد على الأقل");
-    }
+    toast.success(`تمت إضافة باقة المناسبات إلى السلة (إجمالي ${totalPrice.toFixed(2)} د.ل)`);
+    setSelectedItems({});
   };
-
-  const selectedCount = Object.keys(selectedItems).length;
-  const totalPrice = Object.values(selectedItems).reduce((sum, data) => {
-    return sum + (data ? data.finalPrice * data.quantity : 0);
-  }, 0);
 
   const getImageUrl = (url: string | null | undefined) => {
     if (!url) return "/placeholder.svg";
@@ -406,198 +471,292 @@ export default function EventsSection() {
     return `/${url}`;
   };
 
+  const getCategoryIcon = (catTitle: string, customIcon?: string | null) => {
+    if (customIcon) return customIcon;
+    for (const [key, value] of Object.entries(categoryIcons)) {
+      if (catTitle.includes(key)) {
+        return value.icon;
+      }
+    }
+    return categoryIcons.default.icon;
+  };
+
+  const getCategoryBg = (catTitle: string) => {
+    for (const [key, value] of Object.entries(categoryIcons)) {
+      if (catTitle.includes(key)) {
+        return value.bg;
+      }
+    }
+    return categoryIcons.default.bg;
+  };
+
   return (
     <section
       ref={sectionRef}
       id="events"
-      className="bg-royal-red-dark relative overflow-hidden py-16 md:py-24"
+      className="bg-gradient-to-b from-[var(--royal-red-dark)] to-[#2a0a0f] relative overflow-hidden py-16 md:py-24"
     >
-      {/* الخلفية */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-l from-transparent via-[var(--gold)]/40 to-transparent" />
-      <div
-        className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2"
-        style={{
-          width: "800px",
-          height: "400px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, hsl(43 65% 52% / 0.03) 0%, transparent 70%)",
-          filter: "blur(50px)",
-        }}
-      />
+      {/* عناصر زخرفية في الخلفية */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-20 left-10 w-64 h-64 rounded-full bg-[var(--gold)] blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-80 h-80 rounded-full bg-[var(--gold)] blur-3xl" />
+      </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-        {/* العنوان */}
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* العنوان مع مؤشر التقدم */}
         <div
-          className="text-center mb-10 md:mb-16 transition-all duration-700"
+          className="text-center mb-8 md:mb-12 transition-all duration-700"
           style={{
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(24px)",
           }}
         >
-          <h2 className="text-3xl md:text-5xl font-bold text-[var(--gold)] mb-2">
-            المناسبات
+          <div className="inline-flex items-center justify-center gap-2 mb-3">
+            <div className="w-12 h-0.5 bg-gradient-to-l from-[var(--gold)] to-transparent" />
+            <Calendar className="h-6 w-6 text-[var(--gold)]" />
+            <div className="w-12 h-0.5 bg-gradient-to-r from-[var(--gold)] to-transparent" />
+          </div>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--gold)] mb-4">
+            باقة المناسبات
           </h2>
-          <p className="text-sm md:text-lg text-[var(--gold)]/60 max-w-lg mx-auto">
-            اختر من كل قسم عنصراً واحداً لتكوين الباقة
+          <p className="text-base md:text-lg text-[var(--gold)]/60 max-w-2xl mx-auto">
+            اختر عنصراً واحداً من كل قسم لتكوين باقة المناسبات المثالية
           </p>
-          <div className="mx-auto mt-3 w-16 md:w-24 h-1 rounded-full bg-[var(--gold)]/50" />
+          
+          {/* شريط التقدم */}
+          {totalCategories > 0 && (
+            <div className="max-w-md mx-auto mt-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-[var(--gold)]/60">تقدم الباقة</span>
+                <span className="text-sm font-bold text-[var(--gold)]">
+                  {selectedCount} / {totalCategories}
+                </span>
+              </div>
+              <div className="h-2 bg-[var(--gold)]/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[var(--gold)] to-[var(--gold-light)] rounded-full transition-all duration-500"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* حالة التحميل */}
         {loadingEvents ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-[var(--gold)]/40" />
+          <div className="flex items-center justify-center py-20">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full border-4 border-[var(--gold)]/20 border-t-[var(--gold)] animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Gift className="h-6 w-6 text-[var(--gold)]/50" />
+              </div>
+            </div>
           </div>
         ) : (
           <>
             {/* شبكة التصنيفات */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {eventCategories.map((cat, catIdx) => (
-                <div
-                  key={cat.id}
-                  className="group rounded-xl md:rounded-2xl border border-[var(--gold)]/15 bg-[var(--royal-red-light)]/50 p-4 md:p-5 backdrop-blur-sm transition-all duration-500 hover:border-[var(--gold)]/30"
-                  style={{
-                    opacity: visible ? 1 : 0,
-                    transform: visible ? "translateY(0)" : "translateY(20px)",
-                    transition: `opacity 0.5s ease ${catIdx * 0.1}s, transform 0.5s ease ${catIdx * 0.1}s`,
-                  }}
-                >
-                  {/* رأس التصنيف مع حالة الاختيار */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-[var(--gold)]/10 flex items-center justify-center">
-                        <span className="text-xl md:text-2xl">{cat.icon || "🎉"}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {eventCategories.map((cat, catIdx) => {
+                const catBg = getCategoryBg(cat.title);
+                const catIcon = getCategoryIcon(cat.title, cat.icon);
+                const isSelected = !!selectedItems[cat.id];
+                const selectedItem = selectedItems[cat.id];
+
+                return (
+                  <div
+                    key={cat.id}
+                    className={`group relative rounded-2xl overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl ${
+                      isSelected ? 'ring-2 ring-[var(--gold)] shadow-xl' : ''
+                    }`}
+                    style={{
+                      opacity: visible ? 1 : 0,
+                      transform: visible ? "translateY(0)" : "translateY(20px)",
+                      transition: `opacity 0.5s ease ${catIdx * 0.1}s, transform 0.5s ease ${catIdx * 0.1}s`,
+                    }}
+                  >
+                    {/* خلفية متدرجة */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${catBg} opacity-50`} />
+
+                    {/* حدود متوهجة */}
+                    <div className="absolute inset-0 border border-[var(--gold)]/20 group-hover:border-[var(--gold)]/40 rounded-2xl transition-colors duration-300" />
+
+                    {/* المحتوى */}
+                    <div className="relative bg-[var(--royal-red-light)]/40 backdrop-blur-sm p-6 md:p-8">
+                      {/* رأس التصنيف */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <div className="absolute inset-0 bg-[var(--gold)]/20 rounded-xl blur-md group-hover:blur-lg transition-all" />
+                            <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--gold)]/20 to-[var(--gold)]/5 border border-[var(--gold)]/30 flex items-center justify-center text-2xl">
+                              {catIcon}
+                            </div>
+                          </div>
+                          <h3 className="text-lg md:text-xl font-bold text-[var(--cream)] group-hover:text-[var(--gold)] transition-colors">
+                            {cat.title}
+                          </h3>
+                        </div>
+
+                        {/* حالة الاختيار */}
+                        {isSelected && (
+                          <div className="flex items-center gap-1">
+                            <CheckCircle className="h-5 w-5 text-[var(--gold)]" />
+                          </div>
+                        )}
                       </div>
-                      <h3 className="text-base md:text-lg font-bold text-[var(--cream)] group-hover:text-[var(--gold)] transition-colors">
-                        {cat.title}
-                      </h3>
+
+                      {/* العنصر المختار (إذا وجد) */}
+                      {isSelected && selectedItem && (
+                        <div className="mb-4 p-3 bg-[var(--gold)]/10 rounded-xl border border-[var(--gold)]/30">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-bold text-[var(--gold)]">{selectedItem.item.name}</h4>
+                            <button
+                              onClick={() => removeSelection(cat.id)}
+                              className="p-1 hover:bg-red-500/20 rounded-full transition-colors"
+                            >
+                              <X className="h-4 w-4 text-red-400" />
+                            </button>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-[var(--gold)]/60">الكمية:</span>
+                            <span className="text-[var(--cream)]">{selectedItem.quantity}</span>
+                          </div>
+                          <div className="flex justify-between text-sm mt-1">
+                            <span className="text-[var(--gold)]/60">السعر:</span>
+                            <span className="text-[var(--gold)] font-bold">{selectedItem.finalPrice} د.ل</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* شبكة المنتجات - تظهر فقط إذا لم يتم الاختيار */}
+                      {!isSelected && (
+                        <div className="grid grid-cols-2 gap-3">
+                          {cat.items.slice(0, 4).map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => handleEventSelection(item.fullEvent || null, cat.id)}
+                              className="group/item relative rounded-lg overflow-hidden transition-all duration-300 hover:scale-105"
+                            >
+                              <div className="aspect-square">
+                                {item.image_url ? (
+                                  <img
+                                    src={getImageUrl(item.image_url)}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = "/placeholder.svg";
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-[var(--royal-red-light)] to-[var(--royal-red-dark)] flex items-center justify-center">
+                                    <Gift className="h-6 w-6 text-[var(--gold)]/30" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-transparent to-transparent" />
+                              <div className="absolute bottom-0 left-0 right-0 p-2">
+                                <p className="text-xs font-bold text-[var(--cream)] truncate">
+                                  {item.name}
+                                </p>
+                                <p className="text-[10px] text-[var(--gold)]">
+                                  {item.price} د.ل
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                          
+                          {/* زر عرض المزيد إذا كان هناك أكثر من 4 عناصر */}
+                          {cat.items.length > 4 && (
+                            <button
+                              onClick={() => handleEventSelection(cat.items[0].fullEvent || null, cat.id)}
+                              className="col-span-2 mt-2 py-2 text-xs bg-[var(--gold)]/10 rounded-lg border border-[var(--gold)]/30 text-[var(--gold)] hover:bg-[var(--gold)]/20 transition-colors"
+                            >
+                              + {cat.items.length - 4} عناصر أخرى
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {selectedItems[cat.id] && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs bg-[var(--gold)] text-[var(--royal-red-dark)] px-2 py-1 rounded-full">
-                          ✓ تم
-                        </span>
-                        <button
-                          onClick={() => removeSelection(cat.id)}
-                          className="p-1 hover:bg-red-500/20 rounded-full transition-colors"
-                        >
-                          <X className="h-3 w-3 text-red-400" />
-                        </button>
-                      </div>
-                    )}
                   </div>
-
-                  {/* شبكة المنتجات */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {cat.items.map((item) => {
-                      const isSelected = selectedItems[cat.id]?.item.id === item.fullEvent?.id;
-                      
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => handleEventSelection(item.fullEvent || null, cat.id)}
-                          disabled={isSelected}
-                          className={`group/item relative rounded-lg overflow-hidden transition-all duration-200 ${
-                            isSelected
-                              ? "ring-2 ring-[var(--gold)] opacity-60 cursor-not-allowed"
-                              : "hover:ring-1 hover:ring-[var(--gold)]/30"
-                          }`}
-                        >
-                          {/* الصورة */}
-                          <div className="aspect-square bg-[var(--royal-red-dark)]">
-                            {item.image_url ? (
-                              <img
-                                src={getImageUrl(item.image_url)}
-                                alt={item.name}
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover/item:scale-110"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = "/placeholder.svg";
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <span className="text-2xl opacity-30">🎂</span>
-                              </div>
-                            )}
-
-                            {/* شارة مميز */}
-                            {item.is_featured && (
-                              <span className="absolute top-0.5 right-0.5 bg-[var(--gold)] text-[6px] md:text-[8px] font-bold px-1 py-0.5 rounded-full text-[var(--royal-red-dark)]">
-                                مميز
-                              </span>
-                            )}
-
-                            {/* علامة الاختيار */}
-                            {isSelected && (
-                              <div className="absolute inset-0 bg-[var(--gold)]/20 flex items-center justify-center">
-                                <Check className="h-6 w-6 text-[var(--gold)]" />
-                              </div>
-                            )}
-                          </div>
-
-                          {/* معلومات المنتج */}
-                          <div className="p-1.5 bg-gradient-to-t from-[var(--royal-red-dark)] to-transparent">
-                            <h4 className="text-[10px] md:text-xs font-medium text-[var(--cream)] line-clamp-1">
-                              {item.name}
-                            </h4>
-                            <span className="text-[9px] md:text-[11px] font-bold text-[var(--gold)]">
-                              {item.price} د.ل
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* شريط الباقة */}
+            {/* شريط الباقة - يظهر عند اختيار عنصر واحد على الأقل */}
             {selectedCount > 0 && (
-              <div className="sticky bottom-4 mt-8 md:relative md:bottom-auto md:mt-12 z-10">
-                <div className="relative">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-[var(--gold)]/20 via-[var(--gold)]/10 to-transparent rounded-2xl blur-xl opacity-70" />
+              <div className="sticky bottom-6 mt-12 z-20 animate-slide-up">
+                <div className="relative max-w-4xl mx-auto">
+                  {/* تأثير التوهج */}
+                  <div className="absolute -inset-2 bg-gradient-to-r from-[var(--gold)]/30 via-[var(--gold)]/20 to-transparent rounded-3xl blur-2xl" />
 
-                  <div className="relative bg-gradient-to-br from-[var(--royal-red-dark)] to-[var(--royal-red-light)] backdrop-blur-md border-2 border-[var(--gold)]/30 rounded-2xl p-4 md:p-5 shadow-2xl">
-                    {/* شريط التقدم */}
-                    <div className="absolute -top-1 left-4 right-4 h-1 bg-[var(--gold)]/20 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[var(--gold)] to-[var(--gold-light)] rounded-full transition-all duration-500"
-                        style={{
-                          width: `${(selectedCount / eventCategories.length) * 100}%`,
-                        }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
+                  {/* المحتوى */}
+                  <div className="relative bg-gradient-to-br from-[var(--royal-red-dark)] to-[#1a0a0f] backdrop-blur-xl border-2 border-[var(--gold)]/30 rounded-2xl p-6 shadow-2xl">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        {/* أيقونة السلة مع عداد */}
                         <div className="relative">
-                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-[var(--gold)]/20 to-[var(--gold)]/5 border border-[var(--gold)]/30 flex items-center justify-center">
-                            <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 text-[var(--gold)]" />
+                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[var(--gold)]/20 to-[var(--gold)]/5 border-2 border-[var(--gold)]/30 flex items-center justify-center">
+                            <Package className="h-7 w-7 text-[var(--gold)]" />
                           </div>
-                          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[var(--gold)] border-2 border-[var(--royal-red-dark)] flex items-center justify-center">
-                            <span className="text-[10px] font-bold text-[var(--royal-red-dark)]">
+                          <div className="absolute -top-2 -right-2 min-w-[24px] h-6 px-1.5 rounded-full bg-[var(--gold)] border-2 border-[var(--royal-red-dark)] flex items-center justify-center">
+                            <span className="text-xs font-bold text-[var(--royal-red-dark)]">
                               {selectedCount}
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex flex-col">
-                          <span className="text-xs text-[var(--gold)]/60">باقة المناسبات</span>
-                          <span className="text-sm font-bold text-[var(--gold)]">
-                            {totalPrice.toFixed(2)} د.ل
-                          </span>
+                        {/* معلومات الباقة */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm text-[var(--gold)]/60">باقة المناسبات</span>
+                            <div className="w-1 h-1 rounded-full bg-[var(--gold)]/40" />
+                            <span className="text-xs text-[var(--gold)]/40">
+                              {isComplete ? 'اكتملت الباقة' : `متبقي ${remainingCategories.length} أقسام`}
+                            </span>
+                          </div>
+                          <div className="text-2xl font-bold text-[var(--gold)]">
+                            {Object.values(selectedItems).reduce((sum, data) => 
+                              sum + (data ? data.finalPrice * data.quantity : 0), 0
+                            ).toFixed(2)}{" "}
+                            <span className="text-sm text-[var(--gold)]/60">د.ل</span>
+                          </div>
                         </div>
                       </div>
 
+                      {/* زر الإضافة */}
                       <button
                         onClick={addPackageToCart}
-                        className="px-5 md:px-6 py-2.5 md:py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-[var(--gold)] to-[var(--gold-light)] text-[var(--royal-red-dark)] hover:scale-105 transition-all duration-300 shadow-lg shadow-[var(--gold)]/30"
+                        disabled={!isComplete}
+                        className={`group/btn relative overflow-hidden px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl w-full sm:w-auto ${
+                          isComplete
+                            ? 'bg-gradient-to-r from-[var(--gold)] to-[var(--gold-light)] text-[var(--royal-red-dark)] hover:scale-105 shadow-[var(--gold)]/30'
+                            : 'bg-gray-600/50 text-gray-300 cursor-not-allowed'
+                        }`}
                       >
-                        <ShoppingCart className="inline ml-2 h-4 w-4" />
-                        أضف الباقة
+                        <span className="relative z-10 flex items-center justify-center gap-2">
+                          {isComplete ? (
+                            <>
+                              <ShoppingCart className="h-5 w-5 transition-transform group-hover/btn:rotate-12" />
+                              أضف الباقة إلى السلة
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="h-5 w-5" />
+                              أكمل اختيار الأقسام
+                            </>
+                          )}
+                        </span>
                       </button>
                     </div>
+
+                    {/* رسالة الأقسام المتبقية */}
+                    {!isComplete && remainingCategories.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-[var(--gold)]/20">
+                        <p className="text-sm text-[var(--gold)]/60 flex items-center gap-2">
+                          <ArrowLeft className="h-4 w-4" />
+                          الأقسام المتبقية: {remainingCategories.map(c => c.title).join(' • ')}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -613,7 +772,7 @@ export default function EventsSection() {
           onClick={() => setModalEvent(null)}
         >
           <div
-            className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-[var(--gold)]/30 bg-[var(--royal-red-dark)] shadow-2xl animate-in zoom-in-95 duration-300"
+            className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-[var(--gold)]/30 bg-gradient-to-b from-[var(--royal-red-dark)] to-[#1a0a0f] shadow-2xl animate-in zoom-in-95 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close button */}
@@ -626,73 +785,80 @@ export default function EventsSection() {
 
             {/* Product image */}
             {modalEvent.image_url && (
-              <div className="relative h-48 w-full overflow-hidden rounded-t-3xl">
+              <div className="relative h-56 w-full overflow-hidden">
                 <img
                   src={getImageUrl(modalEvent.image_url)}
                   alt={modalEvent.name}
                   className="h-full w-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--royal-red-dark)] via-[var(--royal-red-dark)]/50 to-transparent" />
+                <div className="absolute bottom-4 right-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-[var(--gold)] blur-md opacity-50" />
+                    <span className="relative bg-[var(--gold)] text-[var(--royal-red-dark)] px-4 py-2 rounded-xl font-bold text-lg">
+                      {Number(modalEvent.price).toFixed(2)} د.ل
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 
             <div className="p-6">
-              {/* Product info */}
-              <div className="mb-4 flex items-start justify-between">
-                <h3 className="text-xl font-bold text-[var(--cream)]">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-[var(--cream)] mb-2">
                   {modalEvent.name}
                 </h3>
-                <span className="text-[var(--gold)] font-bold">
-                  {Number(modalEvent.price).toFixed(2)} د.ل
-                </span>
+                {modalEvent.description && (
+                  <p className="text-sm text-[var(--gold)]/60 leading-relaxed">
+                    {modalEvent.description}
+                  </p>
+                )}
               </div>
-
-              {modalEvent.description && (
-                <p className="mb-5 text-sm text-[var(--gold)]/60">
-                  {modalEvent.description}
-                </p>
-              )}
 
               {/* Option Groups */}
               {modalEvent.option_groups && modalEvent.option_groups.length > 0 ? (
-                <div className="mb-6 flex flex-col gap-5">
+                <div className="mb-6 space-y-6">
                   {modalEvent.option_groups.map((group) => (
-                    <div key={group.id}>
-                      <h4 className="mb-2.5 text-sm font-semibold text-[var(--gold)]">
-                        {group.name}
-                        {group.isRequired && <span className="mr-1 text-red-400">*</span>}
-                      </h4>
-                      <div className="flex flex-col gap-2">
+                    <div key={group.id} className="bg-white/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <h4 className="text-sm font-bold text-[var(--gold)]">
+                          {group.name}
+                        </h4>
+                        {group.isRequired && (
+                          <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
+                            مطلوب
+                          </span>
+                        )}
+                      </div>
+                      <div className="space-y-2">
                         {group.options.map((opt) => {
                           const isSelected = selections[group.id]?.includes(opt.id) || false;
                           return (
                             <button
                               key={opt.id}
                               onClick={() => toggleOption(group.id, opt.id)}
-                              className={`flex items-center justify-between rounded-xl border px-4 py-3 text-right transition-all duration-200 ${
+                              className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all duration-200 ${
                                 isSelected
-                                  ? "border-[var(--gold)] bg-[var(--gold)]/15"
-                                  : "border-white/10 bg-white/5 hover:bg-white/10"
+                                  ? "border-[var(--gold)] bg-[var(--gold)]/10"
+                                  : "border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10"
                               }`}
                             >
                               <div className="flex items-center gap-3">
                                 <div
-                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
+                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
                                     isSelected
                                       ? "border-[var(--gold)] bg-[var(--gold)]"
                                       : "border-white/20 bg-transparent"
                                   }`}
                                 >
-                                  {isSelected && (
-                                    <Check className="h-3 w-3 text-[var(--royal-red-dark)]" />
-                                  )}
+                                  {isSelected && <Check className="h-3 w-3 text-[var(--royal-red-dark)]" />}
                                 </div>
                                 <span className={`text-sm font-medium ${isSelected ? "text-[var(--gold)]" : "text-[var(--cream)]"}`}>
                                   {opt.name}
                                 </span>
                               </div>
                               {opt.price > 0 && (
-                                <span className="text-xs font-semibold text-green-400">
+                                <span className="text-sm font-bold text-green-400">
                                   +{opt.price} د.ل
                                 </span>
                               )}
@@ -704,60 +870,61 @@ export default function EventsSection() {
                   ))}
                 </div>
               ) : (
-                <p className="mb-6 text-center text-sm text-[var(--gold)]/40">
-                  لا توجد خيارات إضافية
-                </p>
+                <div className="mb-6 text-center py-8 bg-white/5 rounded-xl">
+                  <p className="text-sm text-[var(--gold)]/40">
+                    لا توجد خيارات إضافية لهذه المناسبة
+                  </p>
+                </div>
               )}
 
               {/* Quantity selector */}
-              <div className="mb-4 flex items-center justify-between p-3 rounded-xl bg-white/5">
-                <span className="text-sm text-[var(--gold)]/70">الكمية</span>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setQuantity(q => Math.min(10, q + 1))}
-                    className="w-8 h-8 rounded-full bg-[var(--gold)]/20 flex items-center justify-center text-[var(--gold)] hover:bg-[var(--gold)]/30"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                  <span className="text-lg font-bold text-[var(--gold)] min-w-[24px] text-center">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className="w-8 h-8 rounded-full bg-[var(--gold)]/20 flex items-center justify-center text-[var(--gold)] hover:bg-[var(--gold)]/30"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
+              <div className="mb-6 bg-white/5 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-[var(--gold)]">الكمية</span>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      className="w-10 h-10 rounded-xl bg-[var(--gold)]/10 hover:bg-[var(--gold)]/20 border border-[var(--gold)]/20 flex items-center justify-center text-[var(--gold)] transition-all"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="text-xl font-bold text-[var(--gold)] min-w-[40px] text-center">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                      className="w-10 h-10 rounded-xl bg-[var(--gold)]/10 hover:bg-[var(--gold)]/20 border border-[var(--gold)]/20 flex items-center justify-center text-[var(--gold)] transition-all"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Total Price */}
-              <div className="mb-4 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-[var(--gold)]/70">سعر القطعة الواحدة:</span>
-                  <span className="text-base font-bold text-[var(--gold)]">
-                    {(calculatedResult?.price || modalEvent.price).toFixed(2)} د.ل
-                  </span>
-                </div>
-                
-                <div className="flex justify-between items-center pt-2 border-t border-[var(--gold)]/20">
-                  <span className="text-base font-bold text-[var(--gold)]">الإجمالي للكمية:</span>
-                  <span className="text-xl font-bold text-[var(--gold)]" style={{ color: 'var(--gold)' }}>
-                    {((calculatedResult?.price || modalEvent.price) * quantity).toFixed(2)} د.ل
-                  </span>
-                </div>
-                
-                {/* تفاصيل الحساب */}
-                <div className="text-xs text-[var(--gold)]/40 text-left">
-                  {quantity} × {(calculatedResult?.price || modalEvent.price).toFixed(2)} د.ل
+              <div className="mb-6 bg-gradient-to-br from-[var(--gold)]/10 to-transparent rounded-xl p-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-[var(--gold)]/60">سعر القطعة:</span>
+                    <span className="font-bold text-[var(--gold)]">
+                      {(calculatedResult?.price || modalEvent.price).toFixed(2)} د.ل
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-[var(--gold)]/20">
+                    <span className="text-base font-bold text-[var(--gold)]">الإجمالي:</span>
+                    <span className="text-2xl font-bold text-[var(--gold)]">
+                      {((calculatedResult?.price || modalEvent.price) * quantity).toFixed(2)} د.ل
+                    </span>
+                  </div>
                 </div>
               </div>
 
+              {/* Confirm button */}
               <button
                 onClick={confirmSelection}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-[var(--gold)]/30 bg-[var(--gold)] py-3.5 text-sm font-bold text-[var(--royal-red-dark)] transition-all duration-300 hover:shadow-xl hover:scale-105"
+                className="w-full py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-[var(--gold)] to-[var(--gold-light)] text-[var(--royal-red-dark)] hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-[var(--gold)]/30 flex items-center justify-center gap-2"
               >
-                <Check className="h-4 w-4" />
+                <Check className="h-5 w-5" />
                 <span>تأكيد الاختيار ({quantity} قطعة)</span>
               </button>
             </div>
