@@ -3,7 +3,6 @@ import { sql } from "@/lib/db";
 import { calculateProductPrice } from "@/lib/pricing";
 import { getCurrentUser } from "@/lib/user-auth";
 
-// تعريف نوع لعناصر الطلب
 interface OrderItem {
   productId: number;
   product_name?: string;
@@ -14,7 +13,6 @@ interface OrderItem {
   notes?: string;
 }
 
-// تعريف نوع لبيانات العنصر المحضرة
 interface PreparedOrderItem {
   product_name: string;
   category: string;
@@ -42,7 +40,6 @@ export async function POST(req: Request) {
       items,
     } = body;
 
-    // 1. التأكد من اكتمال البيانات
     if (!customerName || !phone || !address || !city || !paymentMethod || !items?.length) {
       return NextResponse.json(
         { error: "بيانات الطلب غير مكتملة" },
@@ -50,7 +47,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. حماية الداتابيز من النصوص الطويلة جداً
     if (
       customerName.length > 100 ||
       address.length > 250 ||
@@ -63,7 +59,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. فلترة الاسم
     const nameRegex = /^[a-zA-Z\u0621-\u064A\s]+$/;
     if (!nameRegex.test(customerName.trim())) {
       return NextResponse.json(
@@ -72,7 +67,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. فلترة العنوان
     const addressRegex = /^[a-zA-Z\u0621-\u064A0-9\s\.,\-_/\\]+$/;
     if (!addressRegex.test(address.trim())) {
       return NextResponse.json(
@@ -81,8 +75,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ========== DEBUG: عرض البيانات المستقبلة ==========
-    console.log("\n📦 ===== بداية معالجة الطلب في API =====");
+    console.log("\n📦 ===== بداية معالجة الطلب =====");
     console.log("📋 البيانات المستقبلة:", {
       customerName,
       phone,
@@ -92,44 +85,25 @@ export async function POST(req: Request) {
       paymentMethod,
       itemsCount: items?.length
     });
-    
-    console.log("📋 items المستقبلة:", JSON.stringify(items, null, 2));
-    // ==================================================
 
-    // حساب السعر النهائي لكل عنصر
     let totalAmount = 0;
     const orderItemsData: PreparedOrderItem[] = [];
 
     for (const item of items as OrderItem[]) {
       const selectedOptions = item.selectedOptions || [];
-      
-      // ========== DEBUG: عرض تفاصيل كل عنصر ==========
+
       console.log(`\n📦 معالجة عنصر - ID: ${item.productId}`);
-      console.log(`📋 اسم المنتج: ${item.product_name || "غير معروف"}`);
+      console.log(`📋 الفئة: ${item.category}`);
       console.log(`📋 الكمية: ${item.quantity}`);
-      console.log(`📋 الخيارات المرسلة (raw):`, selectedOptions);
-      
-      // التحقق من وجود optionId
-      if (selectedOptions.length > 0) {
-        console.log(`📋 تفاصيل الخيارات:`);
-        selectedOptions.forEach((opt, idx) => {
-          console.log(`   option ${idx + 1}:`, {
-            optionId: opt.optionId,
-            name: opt.name,
-            price: opt.price
-          });
-          if (!opt.optionId) {
-            console.error(`   ❌ optionId مفقود في هذا الخيار!`);
-          }
-        });
-      } else {
-        console.log(`⚠️  لا توجد خيارات لهذا العنصر`);
-      }
-      // =============================================
+      console.log(`📋 الخيارات المرسلة:`, selectedOptions);
+
+      // ✅ تحديد المصدر بناءً على الفئة
+      const sourceType = item.category === "مناسبات" ? 'event' : 'product';
 
       const pricing = await calculateProductPrice(
         item.productId,
-        selectedOptions
+        selectedOptions,
+        sourceType // ✅ تمرير sourceType
       );
 
       const itemTotal = pricing.finalPrice * item.quantity;
@@ -148,73 +122,35 @@ export async function POST(req: Request) {
     }
 
     totalAmount += deliveryFee;
-    
-    // ========== DEBUG: عرض الإجمالي ==========
-    console.log("\n💰 إجمالي الطلب:", totalAmount);
-    console.log("📋 orderItemsData النهائي:", JSON.stringify(orderItemsData, null, 2));
-    console.log("=====================================\n");
-    // =========================================
 
-    // استخدام sql.begin للمعاملة
+    console.log("\n💰 إجمالي الطلب:", totalAmount);
+    console.log("=====================================\n");
+
     const result = await sql.begin(async () => {
       const currentUser = await getCurrentUser();
 
       const [order] = await sql`
         INSERT INTO orders (
-          customer_name,
-          phone,
-          secondary_phone,
-          address,
-          city,
-          delivery_fee,
-          total_amount,
-          payment_method,
-          notes,
-          status,
-          created_at,
-          cancel_deadline,
-          user_id
+          customer_name, phone, secondary_phone, address, city,
+          delivery_fee, total_amount, payment_method, notes,
+          status, created_at, cancel_deadline, user_id
         ) VALUES (
-          ${customerName},
-          ${phone},
-          ${secondaryPhone || null},
-          ${address},
-          ${city},
-          ${deliveryFee},
-          ${totalAmount},
-          ${paymentMethod},
-          ${notes || null},
-          'pending',
-          NOW(),
-          NOW() + INTERVAL '10 minutes',
-          ${currentUser?.id || null}
+          ${customerName}, ${phone}, ${secondaryPhone || null}, ${address}, ${city},
+          ${deliveryFee}, ${totalAmount}, ${paymentMethod}, ${notes || null},
+          'pending', NOW(), NOW() + INTERVAL '10 minutes', ${currentUser?.id || null}
         )
         RETURNING id
       `;
 
-      // إضافة عناصر الطلب
       for (const itemData of orderItemsData) {
         await sql`
           INSERT INTO order_items (
-            order_id,
-            product_name,
-            category,
-            quantity,
-            unit_price,
-            selected_options,
-            product_price_snapshot,
-            final_price_snapshot,
-            notes
+            order_id, product_name, category, quantity, unit_price,
+            selected_options, product_price_snapshot, final_price_snapshot, notes
           ) VALUES (
-            ${order.id},
-            ${itemData.product_name},
-            ${itemData.category},
-            ${itemData.quantity},
-            ${itemData.unit_price},
-            ${itemData.selected_options}::jsonb,
-            ${itemData.product_price_snapshot},
-            ${itemData.final_price_snapshot},
-            ${itemData.notes}
+            ${order.id}, ${itemData.product_name}, ${itemData.category},
+            ${itemData.quantity}, ${itemData.unit_price}, ${itemData.selected_options}::jsonb,
+            ${itemData.product_price_snapshot}, ${itemData.final_price_snapshot}, ${itemData.notes}
           )
         `;
       }
@@ -243,8 +179,6 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const phone = searchParams.get('phone');
-    
-    // جلب المستخدم الحالي
     const currentUser = await getCurrentUser();
 
     let query = sql`
@@ -258,7 +192,7 @@ export async function GET(req: Request) {
               'category', oi.category,
               'quantity', oi.quantity,
               'unit_price', oi.unit_price,
-              'selected_options', (oi.selected_options::jsonb)::jsonb,  
+              'selected_options', (oi.selected_options::jsonb)::jsonb,
               'product_price_snapshot', oi.product_price_snapshot,
               'final_price_snapshot', oi.final_price_snapshot,
               'notes', oi.notes
@@ -270,7 +204,6 @@ export async function GET(req: Request) {
       LEFT JOIN order_items oi ON o.id = oi.order_id
     `;
 
-    // بناء شروط البحث
     if (currentUser) {
       const localPhone = currentUser.phone.replace('+218', '');
       query = sql`
