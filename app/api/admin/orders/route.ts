@@ -35,7 +35,35 @@ export async function GET() {
       GROUP BY o.id
       ORDER BY o.created_at DESC
     `;
-    return NextResponse.json(orders)
+
+    // ✅ معالجة الباقات: استخراج بيانات الباقة من notes
+    const processedOrders = orders.map((order: any) => {
+      const processedItems = order.items.map((item: any) => {
+        // إذا كان العنصر من نوع package ونسبة package
+        if (item.category === 'package' && item.notes) {
+          try {
+            const packageData = JSON.parse(item.notes);
+            return {
+              ...item,
+              is_package: true,
+              package_items: packageData.items || [],
+              package_total: packageData.totalPrice || item.unit_price,
+              package_quantity: item.quantity
+            };
+          } catch (e) {
+            console.error("Failed to parse package data:", e);
+          }
+        }
+        return item;
+      });
+      
+      return {
+        ...order,
+        items: processedItems
+      };
+    });
+
+    return NextResponse.json(processedOrders);
   } catch (error) {
     console.error("Admin orders error:", error)
     return NextResponse.json({ error: "خطأ في جلب الطلبات" }, { status: 500 })

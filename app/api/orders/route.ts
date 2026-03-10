@@ -9,6 +9,7 @@ interface OrderItem {
   category?: string;
   quantity: number;
   price?: number;
+  basePrice?: number; 
   selectedOptions?: Array<{ optionId: number; name?: string; price?: number }>;
   notes?: string;
 }
@@ -27,6 +28,9 @@ interface PreparedOrderItem {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    
+    // جلب المستخدم بالتوازي مع التحقق
+    const currentUserPromise = getCurrentUser();
 
     const {
       customerName,
@@ -40,6 +44,7 @@ export async function POST(req: Request) {
       items,
     } = body;
 
+    // التحقق من البيانات الأساسية
     if (!customerName || !phone || !address || !city || !paymentMethod || !items?.length) {
       return NextResponse.json(
         { error: "بيانات الطلب غير مكتملة" },
@@ -47,6 +52,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // التحقق من صحة البيانات
     if (
       customerName.length > 100 ||
       address.length > 250 ||
@@ -62,7 +68,7 @@ export async function POST(req: Request) {
     const nameRegex = /^[a-zA-Z\u0621-\u064A\s]+$/;
     if (!nameRegex.test(customerName.trim())) {
       return NextResponse.json(
-        { error: "اسم المستلم يجب أن يحتوي على حروف فقط (بدون أرقام أو رموز)" },
+        { error: "اسم المستلم يجب أن يحتوي على حروف فقط" },
         { status: 400 }
       );
     }
@@ -75,37 +81,56 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log("\n📦 ===== بداية معالجة الطلب =====");
-    console.log("📋 البيانات المستقبلة:", {
-      customerName,
-      phone,
-      address,
-      city,
-      deliveryFee,
-      paymentMethod,
-      itemsCount: items?.length
-    });
+    // انتظار المستخدم بعد التحقق
+    const currentUser = await currentUserPromise;
 
-    let totalAmount = 0;
-    const orderItemsData: PreparedOrderItem[] = [];
-
-    for (const item of items as OrderItem[]) {
+    // حساب الأسعار بالتوازي
+    const pricingPromises = items.map(async (item: OrderItem) => {
       const selectedOptions = item.selectedOptions || [];
 
-      console.log(`\n📦 معالجة عنصر - ID: ${item.productId}`);
-      console.log(`📋 الفئة: ${item.category}`);
-      console.log(`📋 الكمية: ${item.quantity}`);
-      console.log(`📋 الخيارات المرسلة:`, selectedOptions);
+      // معالجة الباقات
+      if (item.category === 'package') {
+        let packageTotal = 0;
+        try {
+          if (item.notes) {
+            const packageData = JSON.parse(item.notes);
+            packageTotal = packageData.items?.reduce((sum: number, pkgItem: any) => 
+              sum + (pkgItem.finalPrice * pkgItem.quantity), 0) || item.price || 0;
+          }
+        } catch {
+          // تجاهل أخطاء التحليل
+        }
 
-      // ✅ تحديد المصدر بناءً على الفئة
+        return {
+          pricing: {
+            productName: item.product_name || "باقة المناسبات",
+            finalPrice: item.price || packageTotal || 0,
+            basePrice: item.basePrice || 0,
+            selectedOptions: []
+          },
+          item
+        };
+      }
+
+      // للمنتجات والمناسبات العادية
       const sourceType = item.category === "مناسبات" ? 'event' : 'product';
-
       const pricing = await calculateProductPrice(
         item.productId,
         selectedOptions,
-        sourceType // ✅ تمرير sourceType
+        sourceType
       );
+      
+      return { pricing, item };
+    });
 
+    // انتظار كل الحسابات مرة واحدة
+    const pricingResults = await Promise.all(pricingPromises);
+
+    // تجميع النتائج
+    let totalAmount = 0;
+    const orderItemsData: PreparedOrderItem[] = [];
+
+    for (const { pricing, item } of pricingResults) {
       const itemTotal = pricing.finalPrice * item.quantity;
       totalAmount += itemTotal;
 
@@ -123,12 +148,9 @@ export async function POST(req: Request) {
 
     totalAmount += deliveryFee;
 
-    console.log("\n💰 إجمالي الطلب:", totalAmount);
-    console.log("=====================================\n");
-
+    // ✅ الحل النهائي: استخدام sql مباشرة في المعاملة
     const result = await sql.begin(async () => {
-      const currentUser = await getCurrentUser();
-
+      // إنشاء الطلب
       const [order] = await sql`
         INSERT INTO orders (
           customer_name, phone, secondary_phone, address, city,
@@ -142,6 +164,7 @@ export async function POST(req: Request) {
         RETURNING id
       `;
 
+      // إدخال جميع عناصر الطلب
       for (const itemData of orderItemsData) {
         await sql`
           INSERT INTO order_items (
@@ -155,7 +178,6 @@ export async function POST(req: Request) {
         `;
       }
 
-      console.log(`✅ تم إنشاء الطلب رقم: ${order.id}`);
       return order;
     });
 
@@ -166,10 +188,9 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error("\n❌ خطأ في إنشاء الطلب:");
-    console.error(error);
+    // رسالة خطأ عامة للإنتاج
     return NextResponse.json(
-      { error: error?.message || "حدث خطأ في إنشاء الطلب" },
+      { error: "حدث خطأ في إنشاء الطلب" },
       { status: 500 }
     );
   }
@@ -177,10 +198,16 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
+    const currentUser = await getCurrentUser();
+    
+    if (!currentUser) {
+      return NextResponse.json([]);
+    }
+
     const { searchParams } = new URL(req.url);
     const phone = searchParams.get('phone');
-    const currentUser = await getCurrentUser();
 
+    // استعلام محسن
     let query = sql`
       SELECT o.*, 
         EXTRACT(EPOCH FROM (o.cancel_deadline - NOW())) as seconds_remaining,
@@ -204,39 +231,34 @@ export async function GET(req: Request) {
       LEFT JOIN order_items oi ON o.id = oi.order_id
     `;
 
-    if (currentUser) {
-      const localPhone = currentUser.phone.replace('+218', '');
-      query = sql`
-        ${query}
-        WHERE o.user_id = ${currentUser.id}
-           OR o.phone = ${currentUser.phone}
-           OR o.phone = ${localPhone}
-           OR o.secondary_phone = ${currentUser.phone}
-           OR o.secondary_phone = ${localPhone}
-      `;
-    } else if (phone) {
+    if (phone && currentUser) {
       const localPhone = phone.replace('+218', '');
       query = sql`
         ${query}
-        WHERE o.phone = ${phone}
-           OR o.phone = ${localPhone}
-           OR o.secondary_phone = ${phone}
-           OR o.secondary_phone = ${localPhone}
+        WHERE o.user_id = ${currentUser.id}
+          AND (o.phone = ${phone} 
+            OR o.phone = ${localPhone}
+            OR o.secondary_phone = ${phone}
+            OR o.secondary_phone = ${localPhone})
       `;
     } else {
-      return NextResponse.json([]);
+      query = sql`
+        ${query}
+        WHERE o.user_id = ${currentUser.id}
+      `;
     }
 
     query = sql`
       ${query}
       GROUP BY o.id
       ORDER BY o.created_at DESC
+      LIMIT 50
     `;
 
     const orders = await query;
     return NextResponse.json(orders);
-  } catch (error: any) {
-    console.error("Orders fetch error:", error);
+
+  } catch {
     return NextResponse.json(
       { error: "خطأ في جلب الطلبات" },
       { status: 500 }

@@ -15,6 +15,16 @@ export interface CartItem {
   notes?: string
 }
 
+export interface PackageItem {
+  id: string; 
+  name: string;
+  items: CartItem[]; 
+  quantity: number; 
+  totalPrice: number; 
+  category: 'package'; 
+}
+// مفتاح التخزين في localStorage
+const STORAGE_KEY = 'baklawa_cart';
 
 // Simple event-driven cart state
 let cartItems: CartItem[] = [];
@@ -30,14 +40,44 @@ const SERVER_CART: CartItem[] = [];
 const SERVER_TOTAL = 0;
 const SERVER_COUNT = 0;
 
+// تحميل السلة من localStorage عند بدء التشغيل
+function loadCartFromStorage() {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        cartItems = JSON.parse(saved);
+        updateSnapshots(); // تحديث الـ snapshots بعد التحميل
+      }
+    } catch (error) {
+      console.error('Failed to load cart from localStorage:', error);
+    }
+  }
+}
+
+// حفظ السلة في localStorage
+function saveCartToStorage() {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cartItems));
+    } catch (error) {
+      console.error('Failed to save cart to localStorage:', error);
+    }
+  }
+}
+
+// تحميل السلة عند بدء التشغيل
+loadCartFromStorage();
+
 function updateSnapshots() {
   cartSnapshot = [...cartItems];
-  totalSnapshot = cartItems.reduce((s, i) => s + i.finalPrice * i.quantity, 0); // ✅ صحيح الآن
+  totalSnapshot = cartItems.reduce((s, i) => s + i.finalPrice * i.quantity, 0);
   countSnapshot = cartItems.reduce((s, i) => s + i.quantity, 0);
 }
 
 function notify() {
   updateSnapshots();
+  saveCartToStorage(); // حفظ بعد كل تغيير
   listeners.forEach((fn) => fn());
 }
 
@@ -69,8 +109,8 @@ export function getServerCount(): number {
 export function addToCart(item: Omit<CartItem, "quantity">) {
   const existing = cartItems.find(
     (ci) =>
-      ci.productId === item.productId && // تغيير: id → productId
-      JSON.stringify(ci.selectedOptions) === JSON.stringify(item.selectedOptions) // تغيير: addons → selectedOptions
+      ci.productId === item.productId &&
+      JSON.stringify(ci.selectedOptions) === JSON.stringify(item.selectedOptions)
   );
   
   if (existing) {

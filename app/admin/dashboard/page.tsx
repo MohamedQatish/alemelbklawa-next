@@ -202,6 +202,15 @@ interface OrderItem {
   addons: string;
   selected_options: any | null;
   notes: string;
+  is_package?: boolean;
+  package_items?: Array<{
+    id?: number;
+    name: string;
+    quantity: number;
+    finalPrice: number;
+  }>;
+  package_total?: number;
+  package_quantity?: number;
 }
 
 interface Order {
@@ -2561,78 +2570,86 @@ export default function AdminDashboard() {
                               </tr>
                             </thead>
                             <tbody>
-                              {order.items?.map((item) => (
-                                <tr
-                                  key={item.id}
-                                  className="admin-row-hover"
-                                  style={{
-                                    borderBottom: `1px solid hsl(200 80% 55% / 0.05)`,
-                                  }}
-                                >
-                                  <td
-                                    className="px-4 py-2"
-                                    style={{ color: T.text }}
-                                  >
-                                    <div className="font-medium">
-                                      {item.product_name}
-                                    </div>
-                                    {(() => {
-                                      // التعامل مع selected_options بأنواعها المختلفة
-                                      let options = item.selected_options;
-
-                                      // إذا كانت نصاً، نحولها لمصفوفة
-                                      if (typeof options === "string") {
-                                        try {
-                                          options = JSON.parse(options);
-                                        } catch (e) {
-                                          options = [];
-                                        }
-                                      }
-
-                                      // إذا كانت مصفوفة وفيها عناصر، نعرضها
-                                      if (
-                                        Array.isArray(options) &&
-                                        options.length > 0
-                                      ) {
-                                        return (
-                                          <div className="mt-2 space-y-1">
-                                            {options.map(
-                                              (opt: any, idx: number) => (
-                                                <div
-                                                  key={idx}
-                                                  className="flex items-center text-xs text-[var(--gold)]/80"
-                                                >
-                                                  <span className="ml-2">
-                                                    •
-                                                  </span>
-                                                  <span>{opt.name}</span>
-                                                  <span className="mr-1 text-[var(--gold)]/60">
-                                                    (+{opt.price} د.ل)
-                                                  </span>
-                                                </div>
-                                              ),
-                                            )}
-                                          </div>
-                                        );
-                                      }
-
-                                      return null;
-                                    })()}
-                                  </td>
-                                  <td
-                                    className="px-4 py-2 text-center"
-                                    style={{ color: T.text }}
-                                  >
-                                    {item.quantity}
-                                  </td>
-                                  <td
-                                    className="px-4 py-2 text-center"
-                                    style={{ color: T.accentLight }}
-                                  >
-                                    {Number(item.unit_price).toFixed(2)} د.ل
-                                  </td>
-                                </tr>
-                              ))}
+                             {order.items?.map((item) => {
+  // التحقق إذا كان العنصر هو باقة
+  if (item.is_package && item.package_items && item.package_items.length > 0) {
+    return (
+      <tr key={item.id} className="admin-row-hover">
+        <td className="px-4 py-2" style={{ color: T.text }}>
+          <div className="font-medium text-[var(--gold)] flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            باقة المناسبات
+          </div>
+          
+          {/* عرض محتويات الباقة */}
+          <div className="mt-2 pr-4 border-r-2 border-[var(--gold)]/20 space-y-1">
+            {item.package_items.map((pkgItem: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-[var(--gold)]" />
+                  <span className="text-[var(--cream)]">{pkgItem.name}</span>
+                </div>
+                <div className="flex items-center gap-3 text-[var(--gold)]/80">
+                  <span>x{pkgItem.quantity}</span>
+                  <span>{(pkgItem.finalPrice * pkgItem.quantity).toFixed(2)} د.ل</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </td>
+        <td className="px-4 py-2 text-center" style={{ color: T.text }}>
+          {item.quantity}
+        </td>
+        <td className="px-4 py-2 text-center" style={{ color: T.accentLight }}>
+          {Number(item.unit_price).toFixed(2)} د.ل
+        </td>
+      </tr>
+    );
+  }
+  
+  // عرض المنتجات العادية
+  return (
+    <tr key={item.id} className="admin-row-hover">
+      <td className="px-4 py-2" style={{ color: T.text }}>
+        <div className="font-medium">
+          {item.product_name}
+        </div>
+        {(() => {
+          let options = item.selected_options;
+          if (typeof options === "string") {
+            try {
+              options = JSON.parse(options);
+            } catch (e) {
+              options = [];
+            }
+          }
+          if (Array.isArray(options) && options.length > 0) {
+            return (
+              <div className="mt-2 space-y-1">
+                {options.map((opt: any, idx: number) => (
+                  <div key={idx} className="flex items-center text-xs text-[var(--gold)]/80">
+                    <span className="ml-2">•</span>
+                    <span>{opt.name}</span>
+                    <span className="mr-1 text-[var(--gold)]/60">
+                      (+{opt.price} د.ل)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            );
+          }
+          return null;
+        })()}
+      </td>
+      <td className="px-4 py-2 text-center" style={{ color: T.text }}>
+        {item.quantity}
+      </td>
+      <td className="px-4 py-2 text-center" style={{ color: T.accentLight }}>
+        {Number(item.unit_price).toFixed(2)} د.ل
+      </td>
+    </tr>
+  );
+})}
                             </tbody>
                           </table>
                         </div>
